@@ -9,6 +9,43 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20356%20196%22%3E%3Cpolygon%20points%3D%2210%2C58%20178%2C14%20346%2C58%22%20fill%3D%22%231e6cf2%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2258%22%20width%3D%22350%22%20height%3D%22134%22%20fill%3D%22%23ffe500%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Cg%20fill%3D%22%231e6cf2%22%3E%3Crect%20x%3D%2211%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%2296.75%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22182.5%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22268.25%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23fff%22%20font-family%3D%22Arial%20Black%2CArial%2Csans-serif%22%20font-weight%3D%22900%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%3Ctext%20x%3D%2249.4%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22135.1%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22220.9%22%20y%3D%22160%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%22306.6%22%20y%3D%22160%22%3EI%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  body.compact .card,
+body.compact .item {
+  padding: 9px;
+  margin-bottom: 8px;
+}
+
+body.compact .person {
+  padding: 7px;
+  margin: 4px 0;
+}
+  #pmsRecordOverlay:not(.hidden) {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 16px;
+}
+
+#pmsRecordOverlay > .card {
+  max-width: 800px;
+  margin: 0 auto;
+}
+  .report-tabs-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.report-tabs-row .tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-tabs-row #reportFilterMenuButton {
+  flex: 0 0 auto;
+}
 :root{--blue:#1a56a0;--navy:#16233a;--red:#b93025;--green:#059669;--amber:#d97706;--bg:#eef2f7;--card:#fff;--border:#d5dbe3;--text:#1f2937;--muted:#6b7280}
 body.dark{--blue:#3b82f6;--navy:#0a1120;--red:#dc2626;--green:#10b981;--amber:#f59e0b;--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8}
 *{box-sizing:border-box}
@@ -19,6 +56,35 @@ button{font:inherit;cursor:pointer}
 button:hover,.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px #0002}
 button:active{transform:scale(.97)}
 button:disabled{opacity:.55;cursor:default;transform:none!important;box-shadow:none!important}
+  button {
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.18);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.24);
+  filter: brightness(1.04);
+}
+
+button:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:7px;padding:10px;background:var(--navy);color:white}
 .brand{flex:1;font-weight:bold;font-size:13px;letter-spacing:.06em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hbtn{border:0;border-radius:6px;padding:8px;background:#e5e7eb;color:#111;position:relative}
@@ -28,7 +94,7 @@ header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:7px;p
 .badge{display:inline-block;padding:3px 7px;background:var(--amber);color:white;border-radius:12px;font-size:11px}
 .badge-assigned{display:inline-block;padding:2px 8px;background:var(--blue);color:white;border-radius:10px;font-size:11px;margin:2px}
 .ticker{overflow:hidden;white-space:nowrap;padding:8px;background:var(--blue);color:white}
-.ticker span{display:inline-block;padding-left:100%;animation:marquee 26s linear infinite}
+.ticker span{display:inline-block;padding-left:100%}
 .ticker:hover span{animation-play-state:paused}
 @keyframes marquee{to{transform:translateX(-100%)}}
 main{max-width:800px;margin:auto}.ct{padding:16px}.title{margin:0 0 14px;font-size:24px}
@@ -273,12 +339,12 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
 .call-incoming{background:linear-gradient(160deg,#16233a,#0b1220)}
 #pmsReportContent:not(.hidden) {
   display: block;
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  overflow-y: auto;
-  background: var(--bg);
-  padding: 16px;
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  overflow: visible;
+  background: transparent;
+  padding: 0;
 }
 
 #pmsReportContent .ct {
@@ -300,6 +366,102 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
   margin-left: auto;
   margin-right: auto;
 }
+.report-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+  #reportFilterMenuButton {
+  margin-left: auto;
+  flex: 0 0 auto;
+  }
+
+.report-toolbar .title {
+  margin-bottom: 14px;
+}
+
+.report-filter-menu {
+  position: absolute;
+  top: 58px;
+  right: 16px;
+  z-index: 20;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.report-filter-menu .card {
+  margin-top: 0;
+  box-shadow: 0 8px 24px #0003;
+}
+  .ticker span {
+  animation-fill-mode: forwards;
+}
+
+.ticker span.finished {
+  display: none;
+  }
+  #settingsMenu {
+  width: min(300px, calc(100vw - 20px)) !important;
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+#settingsMenu h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+#settingsMenu h3 {
+  font-size: 14px;
+  margin: 12px 0 6px;
+}
+
+#settingsMenu label {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+#settingsMenu select,
+#settingsMenu input:not([type="checkbox"]):not([type="file"]) {
+  padding: 7px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+#settingsMenu input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+}
+
+#settingsMenu button {
+  padding: 7px 9px;
+  font-size: 13px;
+  margin: 3px 0;
+}
+  .site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.site-header .title {
+  margin: 0;
+}
+
+.site-header .btn {
+  flex: 0 0 auto;
+}
+#settingSoundFile {
+  flex: 1;
+  min-width: 0;
+}
+
+#clearSoundFileButton {
+  flex: 0 0 auto;
 }
 </style>
 </head>
@@ -415,8 +577,117 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
     <span id="liveDot" class="live-dot" data-live="0" title="Live sync status"></span>
     <button class="hbtn" type="button" onclick="go('notices')" aria-label="Notifications">🔔 <span id="bell"></span></button>
     <button class="hbtn" type="button" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
-    <button class="hbtn" type="button" onclick="signOut()">Sign out</button>
+<button class="hbtn" type="button" onclick="toggleSettingsMenu()" aria-label="Settings">⋮</button>
   </header>
+  <div id="settingsMenu" class="card hidden" style="position:absolute;right:10px;top:58px;z-index:25;width:min(340px,calc(100vw - 20px))">
+  <h2 style="margin-top:0">Settings</h2>
+  <button id="closeSettingsButton" class="gray" type="button">Close</button>
+  <h3>Notifications</h3>
+    <div style="display:flex;gap:8px;margin:8px 0">
+  <button id="builtInSoundChoice" class="btn" type="button">
+    Built-in sounds
+  </button>
+  <button id="customSoundChoice" class="gray" type="button">
+    Custom ringtone
+  </button>
+    </div>
+  <label><input id="settingNotifications" type="checkbox" checked> In-app notifications</label>
+  <label><input id="settingVibration" type="checkbox"> Vibration</label>
+  <div style="display:flex;gap:8px;margin:8px 0">
+  <button id="builtInSoundChoice" class="btn" type="button">Built-in sounds</button>
+  <button id="customSoundChoice" class="gray" type="button">Custom ringtone</button>
+</div>
+
+<div id="builtInSoundPanel">
+  <label for="settingSound">Sound</label>
+  <select id="settingSound">
+    <option value="off">Off</option>
+    <option value="classic">Classic polyphonic</option>
+    <option value="bright">Bright chime</option>
+    <option value="digital">Digital pulse</option>
+    <option value="retro">Retro ringtone</option>
+    <option value="soft">Soft marimba</option>
+    <option value="bell">Warm bell</option>
+  </select>
+
+  <label for="settingAlertDuration">Alert duration</label>
+  <select id="settingAlertDuration">
+    <option value="0">Off</option>
+    <option value="5">5 seconds</option>
+    <option value="10">10 seconds</option>
+    <option value="15">15 seconds</option>
+    <option value="30">30 seconds</option>
+    <option value="60">1 minute</option>
+  </select>
+</div>
+
+<div id="customSoundPanel" class="hidden">
+  <label for="settingCustomAlertDuration">Custom ringtone duration</label>
+  <select id="settingCustomAlertDuration">
+    <option value="0">Off</option>
+    <option value="10">10 seconds</option>
+    <option value="15">15 seconds</option>
+    <option value="30">30 seconds</option>
+    <option value="60">1 minute</option>
+  </select>
+
+  <label for="settingSoundFile">Custom ringtone file</label>
+  <div style="display:flex;gap:6px;align-items:center">
+    <input id="settingSoundFile" type="file" accept="audio/*">
+    <button id="clearSoundFileButton" class="gray" type="button"
+            aria-label="Clear custom ringtone" title="Clear custom ringtone">×</button>
+  </div>
+</div>
+
+<button class="gray" type="button" onclick="previewNotificationSound()">Preview sound</button>
+
+  <h3>Display</h3>
+
+<label for="settingTheme">Background</label>
+<select id="settingTheme">
+  <option value="system">System</option>
+  <option value="light">Light</option>
+  <option value="dark">Dark</option>
+</select>
+
+<label for="settingFont">Font</label>
+<select id="settingFont">
+  <option value="system">System</option>
+  <option value="arial">Arial</option>
+  <option value="georgia">Georgia</option>
+</select>
+
+<label for="settingWeight">Font weight</label>
+<select id="settingWeight">
+  <option value="regular">Regular</option>
+  <option value="bold">Bold</option>
+</select>
+
+<label for="settingStyle">Font style</label>
+<select id="settingStyle">
+  <option value="regular">Regular</option>
+  <option value="italic">Italic</option>
+</select>
+
+<label for="settingTextSize">Text size</label>
+<select id="settingTextSize">
+  <option value="small">Small</option>
+  <option value="regular">Regular</option>
+  <option value="large">Large</option>
+</select>
+
+<label>
+  <input id="settingCompact" type="checkbox">
+  Compact layout
+</label>
+
+<button class="gray" type="button" onclick="resetDisplaySettings()">
+  Reset display settings
+</button>
+  <h3>Account</h3>
+  <button class="gray" type="button" onclick="changePassword()">Change password</button>
+  <button class="red" type="button" onclick="signOut()">Sign out</button>
+  </div>
   <div id="ticker" class="ticker"><span id="tickerText"></span></div>
 
   <main>
@@ -526,132 +797,149 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
     <section class="page hidden" id="page-reports">
   <div class="ct">
     <h1 class="title">📄 Reports</h1>
+    <div id="reportFilterMenu" class="report-filter-menu hidden">
+      <div class="card">
+        <div class="field">
+          <label for="filterReportDate">Report date</label>
+          <input id="filterReportDate" type="date">
+        </div>
+        <div class="field">
+          <label for="filterReportRegion">Region</label>
+          <select id="filterReportRegion">
+            <option value="">All regions</option>
+            <option value="Luzon">Luzon</option>
+            <option value="Visayas">Visayas</option>
+            <option value="Mindanao">Mindanao</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filterReportArea">Area / city</label>
+          <select id="filterReportArea">
+            <option value="">All areas</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filterReportSite">Site</label>
+          <select id="filterReportSite">
+            <option value="">All sites</option>
+          </select>
+        </div>
+        <button class="gray" type="button" id="clearReportFilters">Clear filters</button>
+        <button class="gray" type="button" id="closeReportFilters">Close</button>
+      </div>
+    </div>
 
-    <div class="tabs" id="reportTypeTabs">
+    <div class="report-tabs-row">
+  <div class="tabs" id="reportTypeTabs">
       <button class="tab active" type="button" data-report-type="service">Services Report</button>
       <button class="tab" type="button" data-report-type="delivery">Delivery Report</button>
       <button class="tab" type="button" data-report-type="checklist">PMS Checklist</button>
-    </div>
+      <button class="tab" type="button" id="pmsRecordsTab">PMS Records</button>
+  </div>
+  <button id="reportFilterMenuButton" class="gray" type="button"
+          aria-label="Open report filters" aria-expanded="false">⋮</button>
+</div>
+
     <div id="pmsReportContent" class="hidden">
-  <div id="pmsRecordsFilters"></div>
-  <div id="pmsRecordsList"></div>
   <div class="ct">
-    <h1 class="title">✅ PMS Checklist</h1>
-    <button class="gray" type="button" id="closePmsChecklist">
-  Close checklist
-    </button>
-    <p class="muted">Select an area, then a site. Follow approved PMS procedures and company safety rules.</p>
-
-    <div class="tabs" id="pmsRegionTabs">
-      <button class="tab active" type="button" data-pms-region="Luzon">Luzon</button>
-      <button class="tab" type="button" data-pms-region="Visayas">Visayas</button>
-      <button class="tab" type="button" data-pms-region="Mindanao">Mindanao</button>
-    </div>
-
-    <div id="pmsSitePicker" class="card">
-  <h2 id="pmsSitePickerTitle">Choose a site</h2>
-  <div id="pmsSitePickerOptions"></div>
-</div>
-  </div>
-</div>
-  </div>
-
-   <div id="pmsChecklistPanel" class="hidden">
-     <button id="pmsBackToSites" class="gray" type="button">
-  ← Back to site selection
-     </button>
-  <div class="tabs" id="pmsUnitTabs">
-    <button class="tab active" type="button" data-pms-unit="elevator">Elevator Unit</button>
-    <button class="tab" type="button" data-pms-unit="escalator">Escalator Unit</button>
-  </div>
+    <div id="pmsRecordsView" class="hidden">
+      <h1 class="title">📋 PMS Records</h1>
+      <div id="pmsRecordOverlay" class="hidden" role="dialog" aria-modal="true">
   <div class="card">
-    <h2 id="pmsSelectedSite"></h2>
-    <div class="field">
-  <label for="pmsChecklistDate">Checklist date</label>
-  <input id="pmsChecklistDate" type="date">
-</div>
-  <p class="muted">Checklist fields are for display and data entry only. Entries are not saved.</p>
+    <button id="closePmsRecordOverlay" class="gray" type="button">Close</button>
+    <div id="pmsRecordDetails"></div>
   </div>
-  <div id="pmsCategories"></div>
-  <button class="btn" type="button" id="savePmsChecklistButton">
-  Save checklist
-</button>
-<p id="pmsSaveStatus" class="muted" role="status"></p>
-</div>
-  </div>
+      </div>
+      <div id="pmsRecordsList"></div>
     </div>
+    <div id="pmsChecklistView">
+      <h1 class="title">✅ PMS Checklist</h1>
+      <button class="gray" type="button" id="closePmsChecklist">Close checklist</button>
+      <p class="muted">Select an area, then a site. Follow approved PMS procedures and company safety rules.</p>
+
+      <div class="tabs" id="pmsRegionTabs">
+        <button class="tab active" type="button" data-pms-region="Luzon">Luzon</button>
+        <button class="tab" type="button" data-pms-region="Visayas">Visayas</button>
+        <button class="tab" type="button" data-pms-region="Mindanao">Mindanao</button>
+      </div>
+
+      <div id="pmsSitePicker" class="card">
+        <h2 id="pmsSitePickerTitle">Choose a site</h2>
+        <div id="pmsSitePickerOptions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
     <div id="reportContent">
-    <div class="card">
-      <div class="field">
-        <label for="reportSite">Site</label>
-        <select id="reportSite" required>
-          <option value="">Select a site</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="reportDate">Report date</label>
-        <input id="reportDate" type="date" required>
-      </div>
-      <div class="field">
-        <label for="reportTitle">Title</label>
-        <input id="reportTitle" maxlength="200" required>
-      </div>
-      <div class="field">
-        <label for="reportDetails">Details</label>
-        <textarea id="reportDetails" maxlength="10000" required></textarea>
-      </div>
-      <div class="field">
-  <label for="reportPhotos">Attach photos</label>
-  <input id="reportPhotos" type="file" accept="image/*" multiple>
-      </div>
-      <button class="btn" type="button" id="submitReportButton">Submit report</button>
-      <p id="reportStatus" class="muted" role="status"></p>
-    </div>
-<div class="card">
-  <div class="field">
-    <label for="filterReportDate">Report date</label>
-    <input id="filterReportDate" type="date">
+  <div id="managerReportListOnly" class="hidden">
+    <h2 id="managerReportListTitle">Service Reports</h2>
+    <div id="managerReportList"></div>
   </div>
-  <div class="field">
-    <label for="filterReportRegion">Region</label>
-    <select id="filterReportRegion">
-      <option value="">All regions</option>
-      <option value="Luzon">Luzon</option>
-      <option value="Visayas">Visayas</option>
-      <option value="Mindanao">Mindanao</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="filterReportArea">Area / city</label>
-    <select id="filterReportArea">
-      <option value="">All areas</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="filterReportSite">Site</label>
-    <select id="filterReportSite">
-      <option value="">All sites</option>
-    </select>
-  </div>
-  <button class="gray" type="button" id="clearReportFilters">Clear filters</button>
-</div>
-  <h2 id="reportListTitle">Services Reports</h2>
-  <div id="reportList"></div>
-      </div>
-  </div>
-    </section>
-    <section class="page hidden" id="page-sites"><div class="ct">
-      <h1 class="title">📍 Work sites</h1>
-      <div class="card manager-only hidden">
-        <h2 style="margin-top:0">Add site</h2>
-        <div class="field"><label for="siteName">Site name</label><input id="siteName"></div>
-        <div class="field"><label for="siteAddress">Address / map search</label><input id="siteAddress"></div>
-        <div class="row">
-          <div class="field"><label for="siteRegion">Area</label><select id="siteRegion"><option>Visayas</option><option>Luzon</option><option>Mindanao</option></select></div>
-          <div class="field"><label for="siteCity">City / Province</label><input id="siteCity"></div>
+      <div class="card">
+        <div class="field">
+          <label for="reportSite">Site</label>
+          <select id="reportSite" required>
+            <option value="">Select a site</option>
+          </select>
         </div>
-        <button class="btn" type="button" onclick="addSite()">Add site</button>
+        <div class="field">
+          <label for="reportDate">Report date</label>
+          <input id="reportDate" type="date" required>
+        </div>
+        <div class="field">
+          <label for="reportTitle">Title</label>
+          <input id="reportTitle" maxlength="200" required>
+        </div>
+        <div class="field">
+          <label for="reportDetails">Details</label>
+          <textarea id="reportDetails" maxlength="10000" required></textarea>
+        </div>
+        <div class="field">
+          <label for="reportPhotos">Attach photos</label>
+          <input id="reportPhotos" type="file" accept="image/*" multiple>
+        </div>
+        <div id="reportPhotoPreview" class="media-grid"></div>
+        <button class="btn" type="button" id="submitReportButton">Submit report</button>
+        <p id="reportStatus" class="muted" role="status"></p>
       </div>
+
+      <h2 id="reportListTitle">Service Reports</h2>
+      <div id="reportList"></div>
+    </div>
+
+    <div id="pmsChecklistPanel" class="hidden">
+      <button id="pmsBackToSites" class="gray" type="button">← Back to site selection</button>
+      <div class="tabs" id="pmsUnitTabs">
+        <button class="tab active" type="button" data-pms-unit="elevator">Elevator Unit</button>
+        <button class="tab" type="button" data-pms-unit="escalator">Escalator Unit</button>
+      </div>
+      <div class="card">
+        <h2 id="pmsSelectedSite"></h2>
+        <div class="field">
+          <label for="pmsChecklistDate">Checklist date</label>
+          <input id="pmsChecklistDate" type="date">
+        </div>
+        <p class="muted">Complete the checklist, then save the record.</p>
+<button class="btn" type="button" id="savePmsRecordButton">Save checklist record</button>
+<p id="pmsRecordStatus" class="muted" role="status"></p>
+      </div>
+      <div id="pmsCategories"></div>
+    </div>
+  </div>
+</section>
+    
+    <section class="page hidden" id="page-sites"><div class="ct">
+      <div class="site-header">
+  <h1 class="title">📍 Work sites</h1>
+  <button class="btn" type="button" id="openAddSite">Add site</button>
+</div>
+      <div id="siteMapCard" class="card hidden">
+  <h2 id="siteMapTitle" style="margin-top:0">Selected site</h2>
+  <iframe id="siteMapFrame" class="map"
+          title="Selected work site map" loading="lazy"></iframe>
+</div>
+      
       <h2>All sites</h2><div id="siteList"></div>
     </div></section>
     <section class="page hidden" id="page-dtr"><div class="ct">
@@ -905,27 +1193,26 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
     <div class="card" style="padding:8px">
       <div id="liveMap" style="height:420px"></div>
     </div>
-    <div id="liveLocationList"></div>
+    <p id="liveLocationStatus" class="muted"></p> <div id="liveLocationList"></div>
   </div>
 </section>
   </main>
-
+<div id="dailyVerseOverlay" class="dialog hidden" role="dialog"
+     aria-modal="true" aria-labelledby="dailyVerseTitle">
+  <div class="card">
+    <h2 id="dailyVerseTitle">Daily Bible verse</h2>
+    <p id="dailyVerseText"></p>
+    <p id="dailyVerseReference" class="muted"></p>
+    <button id="closeDailyVerseButton" class="btn" type="button">Close</button>
+  </div>
+</div>
   <nav class="bottom">
     <button type="button" onclick="goBack()">←<br>Back</button>
     <button id="navHome" class="active" type="button" onclick="go('home')">🏠<br>Home</button>
     <button id="navChat" type="button" onclick="go('chat')">💬<br>Chat</button>
   </nav>
 </div>
-<div id="siteMapPicker" class="dialog hidden" role="dialog"
-     aria-modal="true" aria-labelledby="siteMapTitle">
-  <div class="card">
-    <h2 id="siteMapTitle">Site map</h2>
-    <p id="siteMapPopupLabel" class="muted"></p>
-    <iframe id="siteMapPopupFrame" class="map"
-            title="Selected work site map" loading="lazy"></iframe>
-    <button id="closeSiteMapPicker" class="gray" type="button">Close</button>
-  </div>
-</div>
+
 <div id="callScreen" class="call-screen hidden">
   <video id="callRemote" autoplay playsinline></video>
   <video id="callLocal" autoplay playsinline muted></video>
@@ -947,7 +1234,34 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
   <div class="sheet" data-act="noop"><div id="sheetBody"></div></div>
 </div>
 <div id="toastBox" class="toast hidden" role="status"></div>
-
+<div id="addSiteOverlay" class="dialog hidden" role="dialog"
+     aria-modal="true" aria-labelledby="addSiteTitle">
+  <div class="card">
+    <h2 id="addSiteTitle">Add site</h2>
+    <div class="field">
+      <label for="siteName">Site name</label>
+      <input id="siteName">
+    </div>
+    <div class="field">
+      <label for="siteAddress">Address / map search</label>
+      <input id="siteAddress">
+    </div>
+    <div class="field">
+      <label for="siteRegion">Area</label>
+      <select id="siteRegion">
+        <option>Visayas</option>
+        <option>Luzon</option>
+        <option>Mindanao</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="siteCity">City / Province</label>
+      <input id="siteCity">
+    </div>
+    <button class="btn" type="button" onclick="addSite()">Add site</button>
+    <button class="gray" type="button" id="cancelAddSite">Cancel</button>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -956,7 +1270,40 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
   const SUPABASE_URL = "https://subzomvuyxvzhhlpsyrf.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0q5GP8Z8dgltw88xuLdg7g_T56LYzBX";
   const $ = id => document.getElementById(id);
+const DAILY_VERSES = [
+  {
+    text: "The Lord is my shepherd; I shall not want.",
+    reference: "Psalm 23:1"
+  },
+  {
+    text: "Be strong and courageous. Do not be afraid.",
+    reference: "Joshua 1:9"
+  },
+  {
+    text: "Trust in the Lord with all your heart.",
+    reference: "Proverbs 3:5"
+  }
+];
+  function showDailyVerse() {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila"
+  }).format(new Date());
 
+  if (localStorage.getItem("eesi-daily-verse-date") === today) return;
+
+  const start = new Date(new Date().getFullYear(), 0, 1);
+  const day = Math.floor((new Date() - start) / 86400000);
+  const verse = DAILY_VERSES[day % DAILY_VERSES.length];
+
+  $("dailyVerseText").textContent = verse.text;
+  $("dailyVerseReference").textContent = verse.reference;
+  $("dailyVerseOverlay").classList.remove("hidden");
+  localStorage.setItem("eesi-daily-verse-date", today);
+}
+
+$("closeDailyVerseButton").addEventListener("click", () => {
+  $("dailyVerseOverlay").classList.add("hidden");
+});
   if (!window.supabase) {
     $("authStatus").textContent = "Could not load the Supabase library. Check your connection and reload.";
     return;
@@ -972,6 +1319,84 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+  $("settingNotifications").checked =
+  localStorage.getItem("eesi-notifications") !== "off";
+
+$("settingVibration").checked =
+  localStorage.getItem("eesi-vibration") === "on";
+$("settingSound").value =
+  localStorage.getItem("eesi-sound") || "off";
+
+$("settingSound").addEventListener("change", () => {
+  localStorage.setItem("eesi-sound", $("settingSound").value);
+
+  if ($("settingSound").value === "off") {
+    stopSettingSound();
+  }
+
+  toast("Sound setting saved");
+});
+
+ function setSoundSource(source) {
+  localStorage.setItem("eesi-sound-source", source);
+
+  const useCustom = source === "custom";
+
+  $("builtInSoundPanel").classList.toggle("hidden", useCustom);
+  $("customSoundPanel").classList.toggle("hidden", !useCustom);
+
+  $("builtInSoundChoice").classList.toggle("btn", !useCustom);
+  $("builtInSoundChoice").classList.toggle("gray", useCustom);
+  $("customSoundChoice").classList.toggle("btn", useCustom);
+  $("customSoundChoice").classList.toggle("gray", !useCustom);
+  }
+
+const savedSoundSource =
+  localStorage.getItem("eesi-sound-source") || "built-in";
+
+setSoundSource(savedSoundSource);
+
+$("builtInSoundChoice").addEventListener("click", () => {
+  setSoundSource("built-in");
+});
+
+$("customSoundChoice").addEventListener("click", () => {
+  setSoundSource("custom");
+});
+  
+  $("settingSoundFile").addEventListener("change", () => {
+  const file = $("settingSoundFile").files?.[0];
+  if (file) toast("Selected: " + file.name);
+});
+  $("clearSoundFileButton").addEventListener("click", () => {
+  stopSettingSound();
+  $("settingSoundFile").value = "";
+  toast("Custom ringtone cleared.");
+});
+  $("settingAlertDuration").value =
+  localStorage.getItem("eesi-alert-duration") || "15";
+
+$("settingAlertDuration").addEventListener("change", () => {
+  localStorage.setItem(
+    "eesi-alert-duration",
+    $("settingAlertDuration").value
+  );
+  stopSettingSound();
+  toast("Alert duration saved");
+});
+$("settingCustomAlertDuration").value =
+  localStorage.getItem("eesi-custom-alert-duration") || "15";
+
+$("settingCustomAlertDuration").addEventListener("change", () => {
+  localStorage.setItem(
+    "eesi-custom-alert-duration",
+    $("settingCustomAlertDuration").value
+  );
+  stopSettingSound();
+  toast("Custom ringtone duration saved");
+});
+$("settingNotifications").addEventListener("change", saveNotificationSettings);
+$("settingVibration").addEventListener("change", saveNotificationSettings);
   const ROLE_LABELS = {
     admin: "Administrator",
     representative: "Selective Representative",
@@ -983,7 +1408,7 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
   const state = {
     userId: null, email: null, role: null, profile: null,
     profiles: [], roles: {}, presence: {},
-    announcements: [], pending: [],appNotifications: [],
+    announcements: [], pending: [], appNotifications: [], approvalNotifications: [],
     leaveRequests: [],
     threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [],
     sites: [], schedules: [], dtrs: [], notes: [], recs: [],
@@ -992,7 +1417,7 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
     threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [],
     regionFilter: "all", setupIssue: "", booted: false
   };
-
+  let editingReportId = null;
   let authRun = 0;
   let recoveryMode = false;
   let realtimeChannel = null;
@@ -1262,7 +1687,8 @@ const area = $("regArea").value;
     $("roleLabel").textContent = roleLabel(state.role);
     updateAccess();
     showApp();
-    applyTheme(localStorage.getItem("eesi-theme") === "dark");
+    showDailyVerse();
+    applyTheme(localStorage.getItem("eesi-theme") || "system");
 
     await Promise.all([
       loadProfiles(), loadRoles(), loadSites(), loadSchedules(), loadDtrs(),
@@ -1351,6 +1777,9 @@ renderReportSites();
 
   /* ---------------- access / navigation ---------------- */
   function updateAccess() {
+    const canSeePmsChecklist = ["technician", "employee"].includes(state.role);
+document.querySelector('[data-report-type="checklist"]')
+  ?.classList.toggle("hidden", !canSeePmsChecklist);
     document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
     
     document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("hidden", !isManager()));
@@ -1379,7 +1808,7 @@ renderReportSites();
 
     if (p === "profile") renderProfile();
     if (p === "chat") { renderChatList(); renderMessages(); }
-    if (p === "notices") loadAppNotifications();
+    if (p === "notices") {   loadAppNotifications();   loadApprovalNotifications(); }
     if (p === "admin") renderAdmin();
     if (p === "schedule") renderAssigneesPicker();
     renderAll();
@@ -1392,7 +1821,223 @@ renderReportSites();
     go(prev, false);
   }
   window.goBack = goBack;
+  
+function playCustomSettingSound() {
+  const file = $("settingSoundFile").files?.[0];
+  if (!file) return false;
 
+  stopSettingSound();
+
+  customSoundUrl = URL.createObjectURL(file);
+  customSoundAudio = new Audio(customSoundUrl);
+  customSoundAudio.loop = false;
+
+  const audio = customSoundAudio;
+  const url = customSoundUrl;
+
+  audio.addEventListener("ended", () => {
+    if (customSoundAudio === audio) {
+      customSoundAudio = null;
+      customSoundUrl = null;
+      URL.revokeObjectURL(url);
+    }
+  }, { once: true });
+
+  audio.addEventListener("error", () => {
+    if (customSoundAudio === audio) {
+      customSoundAudio = null;
+      customSoundUrl = null;
+      URL.revokeObjectURL(url);
+    }
+    toast("This audio file could not be played.");
+  }, { once: true });
+
+  audio.play().catch(() => {
+    stopSettingSound();
+    toast("Could not play the selected audio file.");
+  });
+
+  return true;
+  }
+function previewNotificationSound() {
+  playSettingSound();
+}
+  window.previewNotificationSound = previewNotificationSound;
+  
+let settingSoundTimer = null;
+let settingSoundTimeout = null;
+let customSoundUrl = null;
+let customSoundAudio = null;
+let settingVibrationTimer = null;
+let settingSoundContext = null;
+
+function stopSettingSound() {
+  clearInterval(settingSoundTimer);
+  clearTimeout(settingSoundTimeout);
+  clearInterval(settingVibrationTimer);
+
+  settingSoundTimer = null;
+  settingSoundTimeout = null;
+  settingVibrationTimer = null;
+
+  if ("vibrate" in navigator) navigator.vibrate(0);
+
+  if (settingSoundContext) {
+    settingSoundContext.close().catch(() => {});
+    settingSoundContext = null;
+  }
+  if (customSoundAudio) {
+  customSoundAudio.pause();
+  customSoundAudio.currentTime = 0;
+  customSoundAudio = null;
+}
+
+if (customSoundUrl) {
+  URL.revokeObjectURL(customSoundUrl);
+  customSoundUrl = null;
+  }
+}
+
+function playSettingSound() {
+  stopSettingSound();
+
+  const choice = $("settingSound").value;
+  const source = localStorage.getItem("eesi-sound-source") || "built-in";
+  const customFile = $("settingSoundFile").files?.[0];
+
+  if (source === "built-in" && choice === "off") {
+    return toast("Choose a built-in sound first.");
+  }
+
+  const duration = Number(
+    source === "custom"
+      ? $("settingCustomAlertDuration").value
+      : $("settingAlertDuration").value
+  );
+
+  const settings = notificationSettings();
+
+  if (duration === 0) {
+    return toast("Choose a duration first.");
+  }
+
+  if (source === "custom") {
+    if (!customFile) {
+      return toast("Select a custom ringtone file first.");
+    }
+
+    playCustomSettingSound();
+    settingSoundTimeout = setTimeout(stopSettingSound, duration * 1000);
+
+    if (settings.enabled && settings.vibration && "vibrate" in navigator) {
+      navigator.vibrate([250, 150, 250]);
+      settingVibrationTimer = setInterval(() => {
+        navigator.vibrate([250, 150, 250]);
+      }, 700);
+    }
+    return;
+  }
+
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    return toast("Sound preview is not supported in this browser.");
+  }
+
+  const patterns = {
+    classic: [659, 784, 988, 784, 659],
+    bright: [880, 1175, 1397, 1175],
+    digital: [660, 660, 880, 660],
+    retro: [784, 659, 523, 659, 784],
+    soft: [523, 659, 784, 659],
+    bell: [784, 988, 784]
+  };
+
+  const notes = patterns[choice] || patterns.bright;
+  settingSoundContext = new AudioContextClass();
+
+  function playPattern() {
+    if (!settingSoundContext || settingSoundContext.state === "closed") return;
+
+    if (settingSoundContext.state === "suspended") {
+      settingSoundContext.resume();
+    }
+
+    const start = settingSoundContext.currentTime;
+
+    notes.forEach((frequency, index) => {
+      const oscillator = settingSoundContext.createOscillator();
+      const gain = settingSoundContext.createGain();
+      const noteStart = start + index * 0.17;
+      const noteEnd = noteStart + 0.14;
+
+      oscillator.type = choice === "digital" ? "square" : "sine";
+      oscillator.frequency.setValueAtTime(frequency, noteStart);
+      gain.gain.setValueAtTime(0.001, noteStart);
+      gain.gain.exponentialRampToValueAtTime(0.10, noteStart + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteEnd);
+
+      oscillator.connect(gain);
+      gain.connect(settingSoundContext.destination);
+      oscillator.start(noteStart);
+      oscillator.stop(noteEnd);
+    });
+  }
+
+  settingSoundContext.resume().then(() => {
+    if (!settingSoundContext || settingSoundContext.state !== "running") {
+      toast("Audio did not start. Try opening the app in Chrome.");
+      return;
+    }
+
+    playPattern();
+    settingSoundTimer = setInterval(
+      playPattern,
+      notes.length * 170 + 350
+    );
+  }).catch(error => {
+    console.error("Audio could not start:", error);
+    toast("Audio could not start. Try opening the app in Chrome.");
+  });
+
+  if (settings.enabled && settings.vibration && "vibrate" in navigator) {
+    navigator.vibrate([250, 150, 250]);
+    settingVibrationTimer = setInterval(() => {
+      navigator.vibrate([250, 150, 250]);
+    }, 700);
+  }
+
+  settingSoundTimeout = setTimeout(stopSettingSound, duration * 1000);
+}
+  function notificationSettings() {
+  return {
+    enabled: localStorage.getItem("eesi-notifications") !== "off",
+    vibration: localStorage.getItem("eesi-vibration") === "on"
+  };
+}
+
+function saveNotificationSettings() {
+  const enabled = $("settingNotifications").checked;
+  const vibration = $("settingVibration").checked;
+
+  localStorage.setItem("eesi-notifications", enabled ? "on" : "off");
+  localStorage.setItem("eesi-vibration", vibration ? "on" : "off");
+
+  toast("Notification settings saved");
+}
+
+function vibrateForNotification() {
+  const settings = notificationSettings();
+
+  if (!settings.enabled || !settings.vibration) return;
+  if ("vibrate" in navigator) navigator.vibrate([120, 60, 120]);
+}
+  function toggleSettingsMenu() {
+  $("settingsMenu").classList.toggle("hidden");
+}
+  $("closeSettingsButton").addEventListener("click", () => {
+  $("settingsMenu").classList.add("hidden");
+});
+window.toggleSettingsMenu = toggleSettingsMenu;
   function toggleTheme() {
     const dark = !document.body.classList.contains("dark");
     applyTheme(dark);
@@ -1400,11 +2045,76 @@ renderReportSites();
   }
   window.toggleTheme = toggleTheme;
 
-  function applyTheme(dark) {
-    document.body.classList.toggle("dark", dark);
-    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0a1120" : "#16233a");
-  }
+  function applyTheme(mode) {
+  const useDark = mode === "dark" ||
+    (mode === "system" &&
+     window.matchMedia("(prefers-color-scheme: dark)").matches);
 
+  document.body.classList.toggle("dark", useDark);
+  document.querySelector('meta[name="theme-color"]')
+    .setAttribute("content", useDark ? "#0a1120" : "#16233a");
+}
+function applyDisplaySettings() {
+  const font = localStorage.getItem("eesi-font") || "system";
+  const weight = localStorage.getItem("eesi-font-weight") || "regular";
+  const style = localStorage.getItem("eesi-font-style") || "regular";
+
+  const fonts = {
+    system: "Arial, sans-serif",
+    arial: "Arial, sans-serif",
+    georgia: "Georgia, serif"
+  };
+
+  document.body.style.fontFamily = fonts[font] || fonts.system;
+  document.body.style.fontWeight = weight === "bold" ? "700" : "400";
+  document.body.style.fontStyle = style === "italic" ? "italic" : "normal";
+
+  $("settingFont").value = font;
+  $("settingWeight").value = weight;
+  $("settingStyle").value = style;
+    const textSize = localStorage.getItem("eesi-text-size") || "regular";
+  const compact = localStorage.getItem("eesi-compact") === "on";
+
+  document.body.style.fontSize =
+    textSize === "small" ? "14px" :
+    textSize === "large" ? "18px" : "15px";
+
+  document.body.classList.toggle("compact", compact);
+
+  $("settingTextSize").value = textSize;
+  $("settingCompact").checked = compact;
+}
+
+function resetDisplaySettings() {
+  [
+  "eesi-font",
+  "eesi-font-weight",
+  "eesi-font-style",
+  "eesi-text-size",
+  "eesi-compact"
+].forEach(key =>
+    localStorage.removeItem(key)
+  );
+
+  $("settingFont").value = "system";
+  $("settingWeight").value = "regular";
+  $("settingStyle").value = "regular";
+  applyDisplaySettings();
+  toast("Display settings reset");
+}
+  $("settingTextSize").addEventListener("change", () => {
+  localStorage.setItem("eesi-text-size", $("settingTextSize").value);
+  applyDisplaySettings();
+});
+
+$("settingCompact").addEventListener("change", () => {
+  localStorage.setItem(
+    "eesi-compact",
+    $("settingCompact").checked ? "on" : "off"
+  );
+  applyDisplaySettings();
+});
+window.resetDisplaySettings = resetDisplaySettings;
   /* ---------------- loaders ---------------- */
   async function loadProfiles() {
     const { data, error } = await client.from("profiles")
@@ -1600,7 +2310,106 @@ renderReportSites();
 renderReportFilters();
 renderReports();
   }
+  let pmsRecords = [];
+
+async function loadPmsRecords() {
+  const box = $("pmsRecordsList");
+  if (!box) return;
+
+  box.innerHTML = '<p class="muted">Loading PMS records…</p>';
+
+  const { data, error } = await client
+    .from("pms_checklist_records")
+    .select("id,checklist_date,site_id,region,team,location,unit_type,unit_group,unit_direction,unit_name,checklist_data,created_by,created_at")
+    .order("checklist_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    box.innerHTML =
+      '<p class="muted">Could not load PMS records: ' + esc(error.message) + '</p>';
+    return;
+  }
+
+  pmsRecords = data || [];
+
+  renderPmsRecords();
+}
+
+function populatePmsRecordFilters() {
+  const options = [
+    ["pmsRecordsTeam", "All teams", record => record.team],
+    ["pmsRecordsLocation", "All locations", record => record.location],
+    ["pmsRecordsSite", "All sites", record => {
+      const site = state.sites.find(item =>
+        String(item.id) === String(record.site_id)
+      );
+      return site
+        ? { label: site.name || "Unnamed site", value: String(site.id) }
+        : null;
+    }]
+  ];
+
+  options.forEach(([id, defaultLabel, getValue]) => {
+    const select = $(id);
+    if (!select) return;
+
+    const current = select.value;
+    const unique = new Map();
+
+    pmsRecords.forEach(record => {
+      const result = getValue(record);
+      if (!result) return;
+
+      if (id === "pmsRecordsSite") {
+        unique.set(result.value, result.label);
+      } else {
+        const value = String(result).trim();
+        if (value) unique.set(value, value);
+      }
+    });
+
+    const entries = [...unique.entries()].sort((a, b) =>
+      a[1].localeCompare(b[1])
+    );
+
+    select.innerHTML =
+      '<option value="">' + defaultLabel + '</option>' +
+      entries.map(([value, label]) =>
+        '<option value="' + esc(value) + '">' + esc(label) + '</option>'
+      ).join("");
+
+    if (unique.has(current)) select.value = current;
+  });
+}
+
+  function renderPmsRecords() {
+  const box = $("pmsRecordsList");
+  if (!box) return;
+
+  const groups = {};
+
+  pmsRecords.forEach((record, index) => {
+    const date = record.checklist_date || "Date not recorded";
+    if (!groups[date]) groups[date] = [];
+    groups[date].push({ record, index });
+  });
+
+  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  box.innerHTML = dates.map(date =>
+    '<div class="card">' +
+      '<h2 style="margin-top:0">📅 ' + esc(fmtDay(date)) + '</h2>' +
+      groups[date].map(({ record, index }) =>
+        '<button type="button" class="item" data-pms-record-index="' + index + '">' +
+          '<b>📍 ' + esc(record.region || "Area not recorded") + '</b>' +
+          '<div class="muted">Tap to view full details</div>' +
+        '</button>'
+      ).join("") +
+    '</div>'
+  ).join("") || '<p class="muted">No PMS records yet.</p>';
+}
   async function loadReports() {
+    
   const { data, error } = await client
     .from("service_delivery_reports")
     .select("id,report_type,site_id,report_date,title,details,created_by,created_at")
@@ -1617,6 +2426,8 @@ renderReports();
 renderReports();
 renderHome();
 }
+  let appNotificationsLoaded = false;
+let approvalNotificationsLoaded = false;
 async function loadAppNotifications() {
   const { data, error } = await client
     .from("app_notifications")
@@ -1629,10 +2440,51 @@ async function loadAppNotifications() {
     return;
   }
 
-  state.appNotifications = data || [];
-  renderAppNotifications();
-}
+  const previousIds = new Set(
+    state.appNotifications.map(item => String(item.id))
+  );
+  const newItems = appNotificationsLoaded
+    ? (data || []).filter(item => !previousIds.has(String(item.id)))
+    : [];
 
+  state.appNotifications = data || [];
+  appNotificationsLoaded = true;
+  renderAppNotifications();
+
+  if (newItems.length && notificationSettings().enabled) {
+    playSettingSound();
+  }
+}
+async function loadApprovalNotifications() {
+  if (!state.userId) return;
+
+  const { data, error } = await client
+    .from("approval_notifications")
+    .select("id,title,body,created_at,is_read")
+    .eq("recipient_user_id", state.userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("Could not load approval notifications:", error);
+    return;
+  }
+
+  const previousIds = new Set(
+    state.approvalNotifications.map(item => String(item.id))
+  );
+  const newItems = approvalNotificationsLoaded
+    ? (data || []).filter(item => !previousIds.has(String(item.id)))
+    : [];
+
+  state.approvalNotifications = data || [];
+  approvalNotificationsLoaded = true;
+  renderNotices();
+
+  if (newItems.length && notificationSettings().enabled) {
+    playSettingSound();
+  }
+}
 function renderAppNotifications() {
   renderNotices();
 }
@@ -1643,6 +2495,16 @@ function renderReports() {
   const type = state.reportType;
   const typeLabel = type === "service" ? "Service Reports" : "Delivery Reports";
   $("reportListTitle").textContent = typeLabel;
+    const listOnly = isManager();
+
+  $("managerReportListOnly").classList.toggle("hidden", !listOnly);
+  $("reportContent").querySelector(":scope > .card").classList.toggle("hidden", listOnly);
+  $("reportListTitle").classList.toggle("hidden", listOnly);
+  $("reportList").classList.toggle("hidden", listOnly);
+
+  if (listOnly) {
+    $("managerReportListTitle").textContent = typeLabel;
+  }
 
   const date = $("filterReportDate")?.value || "";
   const region = $("filterReportRegion")?.value || "";
@@ -1656,6 +2518,7 @@ function renderReports() {
     const site = state.sites.find(item =>
       String(item.id) === String(report.site_id)
     );
+
     if (!site) return !region && !area && !siteId;
     if (region && site.region !== region) return false;
     if (area && site.city !== area) return false;
@@ -1663,18 +2526,31 @@ function renderReports() {
     return true;
   });
 
-  $("reportList").innerHTML = reports.map(report => {
+  $(listOnly ? "managerReportList" : "reportList").innerHTML = reports.map(report => {
     const site = state.sites.find(item =>
       String(item.id) === String(report.site_id)
     );
+    const isOwner = String(report.created_by) === String(state.userId);
+
+    const actions = isOwner && !isManager()
+      ? '<div class="inline-actions">' +
+          '<button class="btn small-btn" type="button" data-report-edit="' +
+            esc(report.id) + '">Edit</button>' +
+          '<button class="red small-btn" type="button" data-report-delete="' +
+            esc(report.id) + '">Delete</button>' +
+        '</div>'
+      : '';
+
     return '<div class="item"><b>' + esc(report.title) + '</b>' +
       '<div class="muted">' + esc(typeLabel) + ' · ' +
         esc(fmtDay(report.report_date)) + ' · ' +
         esc(site ? [site.name, site.city, site.region].filter(Boolean).join(" · ") : "Unknown site") +
-      '</div><div style="white-space:pre-wrap">' + esc(report.details) + '</div></div>';
-  }).join("") || '<p class="muted">No matching ' +
-    (type === "service" ? "Service Reports" : "Delivery Reports") + '.</p>';
-}  
+      '</div>' +
+      '<div style="white-space:pre-wrap">' + esc(report.details) + '</div>' +
+      actions +
+      '</div>';
+  }).join("") || '<p class="muted">No matching ' + typeLabel + '.</p>';
+  }
   async function loadSchedules() {
     const { data, error } = await client.from("schedules")
       .select("id,title,region,scheduled_date,scheduled_time,time_in,time_out,priority,notes,created_at")
@@ -1714,14 +2590,24 @@ function renderReports() {
   }
 
   async function loadAnnouncements() {
-    const { data, error } = await client.from("announcements")
-      .select("id,title,body,author_id,author_name,created_at")
-      .order("created_at", { ascending: false });
-    if (error) return setupError("Could not load announcements", error);
-    state.announcements = data || [];
-    renderAnnouncements();
-    renderNotices();
-  }
+  const { data, error } = await client.from("announcements")
+    .select("id,title,body,author_id,author_name,created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) return setupError("Could not load announcements", error);
+
+  const previousIds = new Set(
+    state.announcements.map(item => String(item.id))
+  );
+  const newAnnouncements = (data || []).filter(item =>
+    !previousIds.has(String(item.id))
+  );
+
+  state.announcements = data || [];
+  renderAnnouncements();
+  renderNotices();
+
+}
 
   async function loadPending() {
     if (!isManager()) { state.pending = []; renderPending(); return; }
@@ -1931,24 +2817,44 @@ app_notifications: () => loadAppNotifications()
   }
 
   async function handleIncomingMessage() {
-    if (!state.userId) return;
-    await loadPreviews();
-    await loadThreads();
-    if (state.activeThread) {
-      const { data, error } = await client.from("messages")
-        .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
-        .eq("thread_id", state.activeThread).order("created_at", { ascending: true }).limit(300);
-      if (!error) {
-        state.messages = data || [];
-        renderMessages();
-        markThreadRead(state.activeThread);
-      }
-    } else {
-      await loadUnread();
+  if (!state.userId) return;
+
+  const previousIds = new Set(
+    state.messages.map(message => String(message.id))
+  );
+
+  await loadPreviews();
+  await loadThreads();
+
+  let incomingMessages = [];
+
+  if (state.activeThread) {
+    const { data, error } = await client.from("messages")
+      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+      .eq("thread_id", state.activeThread)
+      .order("created_at", { ascending: true })
+      .limit(300);
+
+    if (!error) {
+      incomingMessages = (data || []).filter(message =>
+        message.user_id !== state.userId &&
+        !previousIds.has(String(message.id))
+      );
+
+      state.messages = data || [];
+      renderMessages();
+      markThreadRead(state.activeThread);
     }
-    renderChatList();
+  } else {
+    await loadUnread();
   }
 
+  if (incomingMessages.length) {
+    playSettingSound();
+  }
+
+  renderChatList();
+}
   window.addEventListener("online", () => {
     if (state.userId) { startLive(); reloadEverything(); }
   });
@@ -1987,7 +2893,35 @@ app_notifications: () => loadAppNotifications()
     renderChatList();
     renderLeave();
   }
+  
+let tickerIndex = 0;
+let tickerTimer = null;
 
+function updateAnnouncementTicker() {
+  const text = $("tickerText");
+  const announcements = state.announcements || [];
+
+  clearTimeout(tickerTimer);
+  text.style.animation = "none";
+
+  if (!announcements.length) {
+    tickerIndex = 0;
+    text.textContent = "📢 No announcements yet";
+    return;
+  }
+
+  tickerIndex = tickerIndex % announcements.length;
+  const item = announcements[tickerIndex];
+
+  text.textContent = "📢 " + item.title + ": " + item.body;
+  void text.offsetWidth;
+  text.style.animation = "marquee 30s linear 1";
+
+  tickerTimer = setTimeout(() => {
+    tickerIndex = (tickerIndex + 1) % announcements.length;
+    updateAnnouncementTicker();
+  }, 30000);
+}
   function renderHome() {
     if (!state.userId) return;
     const online = onlineIds().size;
@@ -2005,11 +2939,9 @@ app_notifications: () => loadAppNotifications()
     $("welcome").textContent = state.profile?.full_name || state.email || "";
     $("roleLabel").textContent = roleLabel(state.role);
 
-    const tickerItems = state.announcements.map(a => "📢 " + a.title + ": " + a.body);
-    if (state.pending.length && isManager()) tickerItems.unshift("⏳ " + state.pending.length + " registration(s) waiting for approval");
-    const tickerText = tickerItems.join("　 •　 ") || "📢 No announcements yet";
-    if ($("tickerText").textContent !== tickerText) $("tickerText").textContent = tickerText;
-      function renderHomeTimeline() {
+    updateAnnouncementTicker();
+	
+	function renderHomeTimeline() {
     const box = $("homeTimeline");
     if (!box) return;
 
@@ -2379,6 +3311,16 @@ function employeeDisplayName() {
   function renderNotices() {
     if (!state.userId) return;
     const items = [];
+    state.approvalNotifications.forEach(n => {
+  items.push({
+    date: n.created_at,
+    html: '<div class="item">' +
+      '<b>✅ ' + esc(n.title) + '</b>' +
+      '<div class="muted">' + esc(fmtDate(n.created_at)) + '</div>' +
+      '<div>' + esc(n.body) + '</div>' +
+    '</div>'
+  });
+});
 
     if (isManager() && state.pending.length) {
       items.push({
@@ -3012,6 +3954,7 @@ $("messages").addEventListener("pointerdown", event => {
     const { error } = await client.from("sites").insert({ ...site, created_by: state.userId });
     if (error) return toast("Could not add site: " + error.message);
     ["siteName", "siteAddress", "siteCity"].forEach(id => { $(id).value = ""; });
+    $("addSiteOverlay").classList.add("hidden");
     await loadSites();
     toast("Site added");
   }
@@ -3019,7 +3962,7 @@ $("messages").addEventListener("pointerdown", event => {
 
   function showMap(id) {
   const site = state.sites.find(item => String(item.id) === String(id));
-  if (!site) return;
+  if (!site) return toast("Site not found.");
 
   const query = [
     site.address,
@@ -3028,15 +3971,16 @@ $("messages").addEventListener("pointerdown", event => {
     "Philippines"
   ].filter(Boolean).join(", ");
 
-  $("siteMapPopupLabel").textContent =
+  $("siteMapTitle").textContent =
     site.name + " · " + [site.city, site.region].filter(Boolean).join(", ");
 
-  $("siteMapPopupFrame").src =
+  $("siteMapFrame").src =
     "https://maps.google.com/maps?q=" +
     encodeURIComponent(query) +
     "&output=embed";
 
-  $("siteMapPicker").classList.remove("hidden");
+  $("siteMapCard").classList.remove("hidden");
+  $("siteMapCard").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
   function clearDtrForm() {
@@ -3156,6 +4100,37 @@ if (profileError) {
       .update({ status: "approved" }).eq("id", req.id);
     if (reqError) return toast("Role saved but request update failed: " + reqError.message);
 
+    const { data: recipients, error: recipientsError } = await client
+  .from("user_roles")
+  .select("user_id")
+  .eq("approval_status", "approved")
+  .in("app_role", ["admin", "representative"]);
+
+if (recipientsError) {
+  return toast("Member approved, but notification recipients could not be loaded: " +
+    recipientsError.message);
+}
+
+const recipientIds = [...new Set([
+  req.user_id,
+  ...(recipients || []).map(row => row.user_id)
+])];
+
+const { error: notificationError } = await client
+  .from("approval_notifications")
+  .insert(recipientIds.map(recipient_user_id => ({
+    recipient_user_id,
+    title: "Account approved",
+    body: req.full_name + " has been approved and can now sign in."
+  })));
+
+if (notificationError) {
+  return toast("Member approved, but notifications could not be sent: " +
+    notificationError.message);
+}
+
+await loadApprovalNotifications();
+    
     await Promise.all([loadPending(), loadProfiles(), loadRoles()]);
     toast(req.full_name + " approved");
   }
@@ -3609,6 +4584,8 @@ window.clearSignaturePhoto = clearSignaturePhoto;
         esc(id) + '">Save</button>' +
       '<button class="red" type="button" data-act="admin-revoke" data-id="' +
         esc(id) + '">Remove access</button>' +
+    '<button class="red" type="button" data-act="admin-delete-user" data-id="' +
+  esc(id) + '">Delete user permanently</button>'+
     '</div>'
   );
 }
@@ -3621,7 +4598,7 @@ async function saveAdminMember(id) {
 
   const { error: roleError } = await client
     .from("user_roles")
-    .update({ app_role: role })
+    .update({ app_role: role, approval_status: "approved" })
     .eq("user_id", id);
 
   if (roleError) return toast("Could not update role: " + roleError.message);
@@ -3636,9 +4613,9 @@ async function saveAdminMember(id) {
   }
 
   closeSheet();
-  await Promise.all([loadRoles(), loadProfiles()]);
-  renderAdmin();
-  toast("Member updated");
+  await Promise.all([loadRoles(), loadProfiles(), loadPending()]);
+  go("pending");
+  toast("Member updated and approved");
 }
 
 function askRevokeMemberAccess(id) {
@@ -3687,7 +4664,34 @@ async function revokeMemberAccess(id) {
   renderAdmin();
   toast("App access revoked. Existing records were not deleted.");
 }
+async function permanentlyDeleteUser(userId) {
+  if (!isAdmin()) return toast("Administrator only");
+  if (!userId || userId === state.userId) {
+    return toast("You cannot delete your own account here.");
+  }
 
+  const member = profileOf(userId);
+  const name = member?.full_name || member?.email || "this user";
+
+  if (!confirm(
+    "Permanently delete " + name +
+    " from Supabase Auth? This cannot be undone."
+  )) return;
+
+  const { data, error } = await client.functions.invoke("delete-user", {
+    body: { userId }
+  });
+
+  if (error || !data?.success) {
+    return toast("Deletion failed: " +
+      (data?.error || error?.message || "Unknown error."));
+  }
+
+  closeSheet();
+  await Promise.all([loadProfiles(), loadRoles()]);
+  renderAdmin();
+  toast("Supabase Auth user permanently deleted.");
+}
   /* ---------------- chat info panels (direct and group) ---------------- */
   function infoHead(name, sub, avatarHtml) {
     return '<div class="info-head">' + avatarHtml + '<h2>' + esc(name) + '</h2><p class="muted">' + esc(sub) + '</p></div>';
@@ -4064,7 +5068,9 @@ async function revokeMemberAccess(id) {
   /* ---------------- button routing for the new screens ---------------- */
   function handleExtraAct(act, id, el) {
     switch (act) {
+      case "center-live-location": centerLiveLocation(id); return true;
       case "admin-edit": openAdminEditSheet(id); return true;
+      case "admin-delete-user": permanentlyDeleteUser(id); return true;
       case "admin-revoke": askRevokeMemberAccess(id); return true;
       case "admin-revoke-confirm": revokeMemberAccess(id); return true;
       case "admin-edit-save": saveAdminMember(id); return true;
@@ -4101,20 +5107,24 @@ async function revokeMemberAccess(id) {
   }
 
   /* ---------------- delegated clicks/changes ---------------- */
-  $("closeSiteMapPicker").addEventListener("click", () => {
-  $("siteMapPicker").classList.add("hidden");
-  $("siteMapPopupFrame").src = "";
+  
+  $("openAddSite").addEventListener("click", () => {
+  $("addSiteOverlay").classList.remove("hidden");
+});
+
+$("cancelAddSite").addEventListener("click", () => {
+  $("addSiteOverlay").classList.add("hidden");
 });
   document.addEventListener("click", e => {
-    const pmsSiteButton = e.target.closest("[data-pms-site]");
+const pmsSiteButton = e.target.closest("[data-pms-site]");
 if (pmsSiteButton) {
   selectedPmsSiteId = pmsSiteButton.dataset.pmsSite;
-  selectedPmsGroup = "";
-  selectedPmsDirection = "";
-  selectedPmsEquipment = "";
-  renderPmsChecklist();
-  return;
-}
+selectedPmsGroup = "";
+selectedPmsDirection = "";
+selectedPmsEquipment = "";
+renderPmsChecklist();
+return;
+  }
 
 const el = e.target.closest("[data-act]");
 if (!el) return;
@@ -4135,12 +5145,85 @@ if (!el) return;
     else if (act === "leave-review") reviewLeaveRequest(id, el.dataset.decision);
     else if (act === "leave-delete") deleteMyLeaveRequest(id);
   });
+  
+  $("reportList").addEventListener("click", async event => {
+  const editButton = event.target.closest("[data-report-edit]");
+  const deleteButton = event.target.closest("[data-report-delete]");
 
-  $("submitReportButton").addEventListener("click", async () => {
+  if (editButton) {
+    const report = state.reports.find(
+      item => String(item.id) === editButton.dataset.reportEdit
+    );
+
+    if (!report) return toast("Report not found.");
+    if (String(report.created_by) !== String(state.userId)) {
+      return toast("You can edit only your own reports.");
+    }
+
+    editingReportId = report.id;
+    $("reportSite").value = String(report.site_id);
+    $("reportDate").value = report.report_date || "";
+    $("reportTitle").value = report.title || "";
+
+    const details = String(report.details || "");
+    $("reportDetails").value = details.split("\n\nPhotos:\n")[0];
+
+    $("submitReportButton").textContent = "Save report changes";
+    $("reportStatus").textContent = "Editing your report. Update the fields, then save.";
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  if (deleteButton) {
+    const report = state.reports.find(
+      item => String(item.id) === deleteButton.dataset.reportDelete
+    );
+
+    if (!report) return toast("Report not found.");
+    if (String(report.created_by) !== String(state.userId)) {
+      return toast("You can delete only your own reports.");
+    }
+    if (!confirm("Delete this report? This cannot be undone.")) return;
+
+    const { data, error } = await client
+      .from("service_delivery_reports")
+      .delete()
+      .eq("id", report.id)
+      .eq("created_by", state.userId)
+      .select("id");
+
+    if (error) return toast("Could not delete report: " + error.message);
+    if (!data || !data.length) return toast("Report was not deleted.");
+
+    state.reports = state.reports.filter(
+      item => String(item.id) !== String(report.id)
+    );
+    renderReports();
+    toast("Report deleted.");
+  }
+});
+$("reportPhotos").addEventListener("change", () => {
+  $("reportStatus").textContent = "Selected " + $("reportPhotos").files.length + " photo(s).";
+  const preview = $("reportPhotoPreview");
+  preview.innerHTML = "";
+
+  [...$("reportPhotos").files].forEach(file => {
+    if (!file.type.startsWith("image/")) return;
+
+    const image = document.createElement("img");
+    image.alt = file.name;
+    image.title = file.name;
+    image.src = URL.createObjectURL(file);
+    preview.appendChild(image);
+  });
+});
+  
+$("submitReportButton").addEventListener("click", async () => {
   const siteId = Number($("reportSite").value);
   const reportDate = $("reportDate").value;
   const title = $("reportTitle").value.trim();
   const details = $("reportDetails").value.trim();
+  const files = [...($("reportPhotos").files || [])];
 
   if (!siteId || !reportDate || !title || !details) {
     $("reportStatus").textContent = "Complete every field before submitting.";
@@ -4148,55 +5231,250 @@ if (!el) return;
   }
 
   $("submitReportButton").disabled = true;
-  $("reportStatus").textContent = "Submitting…";
+  $("reportStatus").textContent = editingReportId
+    ? "Saving report changes…"
+    : "Uploading photos and submitting…";
 
-  const { error } = await client.rpc("submit_service_delivery_report", {
-    p_report_type: state.reportType,
-    p_site_id: siteId,
-    p_report_date: reportDate,
-    p_title: title,
-    p_details: details
-  });
+  try {
+    const photoLinks = [];
+    const existingReport = editingReportId
+      ? state.reports.find(report =>
+          String(report.id) === String(editingReportId)
+        )
+      : null;
 
-  $("submitReportButton").disabled = false;
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please select image files only.");
+      }
 
-  if (error) {
-    $("reportStatus").textContent = "Could not submit report: " + error.message;
-    return;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = state.userId + "/" + Date.now() + "-" + safeName;
+
+      const { error: uploadError } = await client.storage
+        .from("report-photos")
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = client.storage
+        .from("report-photos")
+        .getPublicUrl(path);
+
+      photoLinks.push(data.publicUrl);
+    }
+
+    let cleanDetails = details;
+    let oldPhotoLinks = [];
+
+    if (existingReport) {
+      const parts = String(existingReport.details || "").split("\n\nPhotos:\n");
+      cleanDetails = parts[0];
+
+      if (parts[1]) {
+        oldPhotoLinks = parts[1]
+          .split("\n")
+          .map(link => link.trim())
+          .filter(Boolean);
+      }
+    }
+
+    const allPhotoLinks = [...oldPhotoLinks, ...photoLinks];
+    const reportDetails = allPhotoLinks.length
+      ? cleanDetails + "\n\nPhotos:\n" + allPhotoLinks.join("\n")
+      : cleanDetails;
+
+    if (editingReportId) {
+      const { data, error } = await client
+        .from("service_delivery_reports")
+        .update({
+          site_id: siteId,
+          report_date: reportDate,
+          title,
+          details: reportDetails
+        })
+        .eq("id", editingReportId)
+        .eq("created_by", state.userId)
+        .select("id");
+
+      if (error) throw error;
+      if (!data || !data.length) {
+        throw new Error("Report was not updated. Check that it is still yours.");
+      }
+
+      editingReportId = null;
+      $("reportStatus").textContent = "Report updated.";
+    } else {
+      const { error } = await client.rpc("submit_service_delivery_report", {
+        p_report_type: state.reportType,
+        p_site_id: siteId,
+        p_report_date: reportDate,
+        p_title: title,
+        p_details: reportDetails
+      });
+
+      if (error) throw error;
+      $("reportStatus").textContent = "Report submitted.";
+    }
+
+    $("reportTitle").value = "";
+    $("reportDetails").value = "";
+    $("reportPhotos").value = "";
+    $("submitReportButton").textContent = "Submit report";
+
+    await loadReports();
+    await loadAppNotifications();
+  } catch (error) {
+    $("reportStatus").textContent =
+      "Could not save report: " + (error.message || String(error));
+  } finally {
+    $("submitReportButton").disabled = false;
   }
-
-  $("reportTitle").value = "";
-  $("reportDetails").value = "";
-  $("reportStatus").textContent = "Report submitted.";
-await loadReports();
-await loadAppNotifications();
 });
 
 
-    document.querySelectorAll("[data-report-type]").forEach(button => {
+    function showPmsView(view) {
+  const records = view === "records";
+  $("reportFilterMenuButton").classList.toggle("hidden", records);
+
+  $("reportContent").classList.add("hidden");
+  $("pmsReportContent").classList.remove("hidden");
+  $("pmsRecordsView").classList.toggle("hidden", !records);
+  $("pmsChecklistView").classList.toggle("hidden", records);
+  $("pmsChecklistPanel").classList.toggle(
+    "hidden",
+    records || !["technician", "employee"].includes(state.role)
+  );
+
+  document.querySelectorAll("[data-report-type]").forEach(tab => {
+    tab.classList.toggle(
+      "active",
+      !records && tab.dataset.reportType === "checklist"
+    );
+  });
+
+  $("pmsRecordsTab").classList.toggle("active", records);
+
+  if (records) {
+    loadPmsRecords();
+  } else {
+    renderPmsSiteOptions();
+  }
+}
+
+document.querySelectorAll("[data-report-type]").forEach(button => {
   button.addEventListener("click", () => {
     const type = button.dataset.reportType;
+
+    if (type === "checklist") {
+      showPmsView("checklist");
+      renderPmsChecklist();
+      return;
+    }
+
+    $("pmsReportContent").classList.add("hidden");
+    $("pmsChecklistPanel").classList.add("hidden");
+    $("reportContent").classList.remove("hidden");
+    $("reportFilterMenuButton").classList.remove("hidden");
+    $("pmsRecordsTab").classList.remove("active");
 
     document.querySelectorAll("[data-report-type]").forEach(tab => {
       tab.classList.toggle("active", tab === button);
     });
 
-    $("reportContent").classList.toggle("hidden", type === "checklist");
-    $("pmsReportContent").classList.toggle("hidden", type !== "checklist");
-
-    if (type !== "checklist") {
-      state.reportType = type;
-      renderReports();
-    }
+    state.reportType = type;
+    renderReports();
   });
 });
+
+$("pmsRecordsTab").addEventListener("click", () => {
+  showPmsView("records");
+});
+  $("pmsRecordsList").addEventListener("click", event => {
+  const item = event.target.closest("[data-pms-record-index]");
+  if (!item) return;
+
+  const record = pmsRecords[Number(item.dataset.pmsRecordIndex)];
+  if (!record) return;
+
+  const site = state.sites.find(entry =>
+    String(entry.id) === String(record.site_id)
+  );
+
+  const answers = record.checklist_data || {};
+const answerRows = [];
+
+Object.entries(answers).forEach(([key, value]) => {
+  const match = key.match(/^ayala-escalator-(\d+)-(status|quantity|note)$/);
+
+  if (match) {
+    const itemIndex = Number(match[1]);
+    const fieldType = match[2];
+    const itemName = AYALA_ESCALATOR_ITEMS[itemIndex] || "Checklist item";
+
+    const question = {
+      status: itemName + " - Status",
+      quantity: itemName + " - Quantity",
+      note: itemName + " - Note"
+    }[fieldType];
+
+    answerRows.push(
+      '<div class="item"><b>' + esc(question) + ':</b> ' +
+      esc(value || "Not recorded") + '</div>'
+    );
+    return;
+  }
+
+  const question = {
+    "central-status": "Selected Central Bloc escalator - Status",
+    "central-note": "Selected Central Bloc escalator - Inspection note"
+  }[key] || key;
+
+  answerRows.push(
+    '<div class="item"><b>' + esc(question) + ':</b> ' +
+    esc(value || "Not recorded") + '</div>'
+  );
+});
+
+const answerHtml = answerRows.join("") ||
+  '<p class="muted">No checklist details recorded.</p>';
+  $("pmsRecordDetails").innerHTML =
+    '<h2>📋 PMS Record</h2>' +
+    '<div class="item"><b>Date:</b> ' + esc(fmtDay(record.checklist_date)) + '</div>' +
+    '<div class="item"><b>Site:</b> ' + esc(site?.name || "Unknown site") + '</div>' +
+    '<div class="item"><b>Area:</b> ' + esc(record.region || "Not recorded") + '</div>' +
+    '<div class="item"><b>Team:</b> ' + esc(record.team || "Not recorded") + '</div>' +
+    '<div class="item"><b>Location:</b> ' + esc(record.location || "Not recorded") + '</div>' +
+    '<div class="item"><b>Unit type:</b> ' + esc(record.unit_type || "Not recorded") + '</div>' +
+    '<div class="item"><b>Unit group:</b> ' + esc(record.unit_group || "Not recorded") + '</div>' +
+    '<div class="item"><b>Direction:</b> ' + esc(record.unit_direction || "Not recorded") + '</div>' +
+    '<div class="item"><b>Unit name:</b> ' + esc(record.unit_name || "Not recorded") + '</div>' +
+    '<h3>Checklist details</h3>' + answerHtml;
+
+  $("pmsRecordOverlay").classList.remove("hidden");
+});
+
+$("closePmsRecordOverlay").addEventListener("click", () => {
+  $("pmsRecordOverlay").classList.add("hidden");
+});
+ 
 ["filterReportDate", "filterReportRegion", "filterReportArea", "filterReportSite"]
   .forEach(id => {
     $(id).addEventListener("change", () => {
-      if (id === "filterReportRegion" || id === "filterReportArea") {   renderReportFilters(); }
+      if (id === "filterReportRegion" || id === "filterReportArea") {
+        renderReportFilters();
+      }
       renderReports();
     });
   });
+
+$("reportFilterMenuButton").addEventListener("click", () => {
+  const menu = $("reportFilterMenu");
+  const isOpening = menu.classList.contains("hidden");
+
+  menu.classList.toggle("hidden", !isOpening);
+  $("reportFilterMenuButton").setAttribute("aria-expanded", String(isOpening));
+});
 
 $("clearReportFilters").addEventListener("click", () => {
   $("filterReportDate").value = "";
@@ -4205,6 +5483,13 @@ $("clearReportFilters").addEventListener("click", () => {
   $("filterReportArea").value = "";
   $("filterReportSite").value = "";
   renderReports();
+
+  $("reportFilterMenu").classList.add("hidden");
+  $("reportFilterMenuButton").setAttribute("aria-expanded", "false");
+});
+  $("closeReportFilters").addEventListener("click", () => {
+  $("reportFilterMenu").classList.add("hidden");
+  $("reportFilterMenuButton").setAttribute("aria-expanded", "false");
 });
 $("closePmsChecklist").addEventListener("click", () => {
   $("pmsReportContent").classList.add("hidden");
@@ -4289,7 +5574,7 @@ const CENTRAL_BLOC_ESCALATORS = {
       { id: "Esc. No. 6", floor: "2-G" },
       { id: "Esc. No. 7", floor: "3-2" },
       { id: "Esc. No. 9", floor: "4-3" },
-      { id: "Esc. No. 12", floor: "5-4" },
+      { id: "Esc. No. 12", floor: "5-4" }
     ],
     UP: [
       { id: "Esc. No. 1", floor: "B2-B1" },
@@ -4308,7 +5593,7 @@ const CENTRAL_BLOC_ESCALATORS = {
     DOWN: [
       { id: "Esc. No. 14", floor: "2-G" },
       { id: "Esc. No. 30", floor: "3-2" },
-      { id: "Esc. No. 16", floor: "4-3" },
+      { id: "Esc. No. 16", floor: "4-3" }
     ],
     UP: [
       {
@@ -4520,7 +5805,12 @@ function renderAyalaElevator() {
     : "");
 }
 function renderGenericPms() {
-  return "";
+  const site = pmsSelectedSite();
+  return '<div class="card"><p class="muted">' +
+    'No PMS unit list is configured for ' +
+    esc(site?.name || "this site") +
+    '. Add approved elevator or escalator units before recording a checklist.' +
+    '</p></div>';
 }
 function renderPmsSiteOptions() {
   const sites = (state.sites || []).filter(site =>
@@ -4542,31 +5832,21 @@ function renderPmsSiteOptions() {
       esc(selectedPmsRegion) + '.</p>';
 }
 function renderPmsChecklist() {
-const canUsePmsChecklist =
-  ["technician", "employee"].includes(state.role);
+  const canUsePmsChecklist = ["technician", "employee"].includes(state.role);
+  const selected = pmsSelectedSite();
 
-$("pmsChecklistPanel").classList.toggle(
-  "hidden",
-  !canUsePmsChecklist || $("pmsReportContent").classList.contains("hidden")
-);
-  document.querySelectorAll("[data-pms-region]").forEach(button => {
-    button.classList.toggle(
-      "active",
-      button.dataset.pmsRegion === selectedPmsRegion
-    );
-  });
+  $("pmsChecklistPanel").classList.toggle(
+    "hidden",
+    !canUsePmsChecklist || $("pmsReportContent").classList.contains("hidden")
+  );
 
   document.querySelectorAll("[data-pms-unit]").forEach(button => {
-    button.classList.toggle(
-      "active",
-      button.dataset.pmsUnit === selectedPmsUnit
-    );
+    button.classList.toggle("active", button.dataset.pmsUnit === selectedPmsUnit);
   });
-
-  const selected = pmsSelectedSite();
 
   if (!selected) {
     selectedPmsSiteId = "";
+    $("pmsSitePicker").classList.remove("hidden");
     $("pmsChecklistPanel").classList.add("hidden");
     return;
   }
@@ -4576,12 +5856,13 @@ $("pmsChecklistPanel").classList.toggle(
     " · " +
     (selectedPmsUnit === "elevator" ? "Elevator Unit" : "Escalator Unit");
 
-  $("pmsChecklistPanel").classList.toggle(   "hidden",   !["technician", "employee"].includes(state.role) ||     $("pmsReportContent").classList.contains("hidden") );
+  $("pmsSitePicker").classList.add("hidden");
+  $("pmsChecklistPanel").classList.remove("hidden");
 
   if (isCentralBloc(selected) && selectedPmsUnit === "escalator") {
     $("pmsCategories").innerHTML = renderCentralBlocEscalator();
   } else if (isCentralBloc(selected) && selectedPmsUnit === "elevator") {
-  $("pmsCategories").innerHTML = renderCentralBlocElevator();
+    $("pmsCategories").innerHTML = renderCentralBlocElevator();
   } else if (isAyalaCebu(selected) && selectedPmsUnit === "escalator") {
     $("pmsCategories").innerHTML = renderAyalaEscalator();
   } else if (isAyalaCebu(selected) && selectedPmsUnit === "elevator") {
@@ -4612,12 +5893,63 @@ document.querySelectorAll("[data-pms-unit]").forEach(button => {
     renderPmsChecklist();
   });
 });
+  $("savePmsRecordButton").addEventListener("click", async () => {
+  const site = pmsSelectedSite();
+  const status = $("pmsRecordStatus");
+
+  if (!state.userId) {
+    status.textContent = "Sign in before saving a checklist.";
+    return;
+  }
+  if (!site) {
+    status.textContent = "Select a site first.";
+    return;
+  }
+
+  const checklistDate = $("pmsChecklistDate").value;
+  if (!checklistDate) {
+    status.textContent = "Choose a checklist date.";
+    return;
+  }
+
+  const checklistData = {};
+  $("pmsCategories").querySelectorAll("select, input, textarea").forEach(field => {
+    if (!field.id) return;
+    if (field.type === "radio" && !field.checked) return;
+    if (field.type === "checkbox" && !field.checked) return;
+    checklistData[field.id] = field.value;
+  });
+
+  const team = state.profile?.team || null;
+  const { error } = await client.from("pms_checklist_records").insert({
+    created_by: state.userId,
+    checklist_date: checklistDate,
+    site_id: Number(site.id),
+    region: site.region || "",
+    team,
+    location: [site.address, site.city].filter(Boolean).join(", ") || null,
+    unit_type: selectedPmsUnit,
+    unit_group: selectedPmsGroup || null,
+    unit_direction: selectedPmsDirection || null,
+    unit_name: selectedPmsEquipment || null,
+    checklist_data: checklistData
+  });
+
+  if (error) {
+    status.textContent = "Could not save checklist: " + error.message;
+    return;
+  }
+
+  status.textContent = "Checklist record saved.";
+  toast("PMS checklist saved.");
+});
 $("pmsBackToSites").addEventListener("click", () => {
   selectedPmsSiteId = "";
   selectedPmsGroup = "";
   selectedPmsDirection = "";
   selectedPmsEquipment = "";
   $("pmsChecklistPanel").classList.add("hidden");
+  $("pmsSitePicker").classList.remove("hidden");
   renderPmsSiteOptions();
 });
 
@@ -4744,6 +6076,7 @@ $("stopLocationButton").addEventListener(
 );
 let liveMapInstance = null;
 let liveMapMarkers = [];
+  const liveLocationMarkers = new Map();
 
 window.initLiveMap = function () {
   const element = $("liveMap");
@@ -4755,27 +6088,33 @@ window.initLiveMap = function () {
     mapTypeControl: true
   });
 };
+function centerLiveLocation(userId) {
+  const marker = liveLocationMarkers.get(String(userId));
 
-async function loadLiveMap() {
-  if (!isAdmin()) {
-    return toast("Administrator only");
+  if (!marker || !liveMapInstance) {
+    return toast("That employee has no recent shared location.");
   }
 
-  const box = $("liveLocationList");
-  if (!box) return;
+  liveMapInstance.panTo(marker.getPosition());
+  liveMapInstance.setZoom(16);
+  google.maps.event.trigger(marker, "click");
+}
+async function loadLiveMap() {
+  if (!isAdmin()) return toast("Administrator only");
+
+  const listBox = $("liveLocationList");
+  const statusBox = $("liveLocationStatus");
+  if (!listBox || !statusBox) return;
 
   if (!window.google?.maps) {
-    box.textContent = "Google Maps is still loading. Try again shortly.";
+    statusBox.textContent = "Google Maps is still loading. Try again shortly.";
     return;
   }
 
-  if (!liveMapInstance) {
-    window.initLiveMap();
-  }
+  if (!liveMapInstance) window.initLiveMap();
 
   if (!liveMapInstance) {
-    box.textContent =
-      "Map could not be initialized. Check the Google Maps API key and browser console.";
+    statusBox.textContent = "Map could not be initialized. Check the Google Maps setup.";
     return;
   }
 
@@ -4790,28 +6129,27 @@ async function loadLiveMap() {
     .gte("updated_at", cutoff);
 
   if (error) {
-    box.textContent = "Could not load locations: " + error.message;
+    statusBox.textContent = "Could not load locations: " + error.message;
     return;
   }
 
-  liveMapMarkers.forEach(marker => marker.setMap(null));
+  liveLocationMarkers.forEach(marker => marker.setMap(null));
+  liveLocationMarkers.clear();
   liveMapMarkers = [];
 
-  const locations = data || [];
-  box.textContent = locations.length
-    ? locations.length + " shared location(s), updated within 5 minutes."
-    : "No recent shared locations.";
+  const online = onlineIds();
+  const recentLocations = data || [];
+  const onlineLocations = recentLocations.filter(location =>
+    online.has(location.user_id)
+  );
+
+  statusBox.textContent = onlineLocations.length
+    ? onlineLocations.length + " online employee(s) with a recent shared location."
+    : "No online employees are currently sharing a recent location.";
 
   const bounds = new google.maps.LatLngBounds();
 
-  const markerColors = {
-    admin: "#2563eb",
-    representative: "#7c3aed",
-    technician: "#d97706",
-    employee: "#059669"
-  };
-
-  locations.forEach(location => {
+  onlineLocations.forEach(location => {
     const lat = Number(location.latitude);
     const lng = Number(location.longitude);
 
@@ -4819,22 +6157,15 @@ async function loadLiveMap() {
 
     const profile = profileOf(location.user_id);
     const role = state.roles[location.user_id]?.app_role || "employee";
-    const position = { lat, lng };
     const name = profile?.full_name || "Member";
+    const position = { lat, lng };
 
     const marker = new google.maps.Marker({
-  map: liveMapInstance,
-  position,
-  title: name + " · " + roleLabel(role),
-  label: {
-    text: name + " · " + roleLabel(role),
-    color: "#111827",
-    fontSize: "12px",
-    fontWeight: "bold"
-  }
-});
+      map: liveMapInstance,
+      position,
+      title: name + " · " + roleLabel(role)
+    });
 
-    // Build popup text safely, without inserting database text as HTML.
     const content = document.createElement("div");
     const nameLine = document.createElement("strong");
     nameLine.textContent = name;
@@ -4850,15 +6181,34 @@ async function loadLiveMap() {
     const infoWindow = new google.maps.InfoWindow({ content });
 
     marker.addListener("click", () => {
-      infoWindow.open({
-        anchor: marker,
-        map: liveMapInstance
-      });
+      infoWindow.open({ anchor: marker, map: liveMapInstance });
     });
 
+    liveLocationMarkers.set(String(location.user_id), marker);
     liveMapMarkers.push(marker);
     bounds.extend(position);
   });
+
+  const rows = onlineLocations
+    .filter(location =>
+      Number.isFinite(Number(location.latitude)) &&
+      Number.isFinite(Number(location.longitude))
+    )
+    .sort((a, b) =>
+      profileName(a.user_id).localeCompare(profileName(b.user_id))
+    );
+
+  listBox.innerHTML = rows.map(location => {
+    const profile = profileOf(location.user_id);
+    const role = state.roles[location.user_id]?.app_role || "employee";
+
+    return '<button type="button" class="person" data-act="center-live-location" data-id="' +
+      esc(location.user_id) + '">' +
+      '<span class="person-info"><b>' + esc(profile?.full_name || "Member") +
+      '</b><span class="muted">Online · ' + esc(roleLabel(role)) +
+      ' · Updated ' + esc(fmtDate(location.updated_at)) +
+      '</span></span><span aria-hidden="true">›</span></button>';
+  }).join("");
 
   if (liveMapMarkers.length === 1) {
     liveMapInstance.setCenter(liveMapMarkers[0].getPosition());
@@ -4867,10 +6217,34 @@ async function loadLiveMap() {
     liveMapInstance.fitBounds(bounds);
   }
 }
+  
   /* ---------------- init ---------------- */
+  $("settingFont").addEventListener("change", () => {
+  localStorage.setItem("eesi-font", $("settingFont").value);
+  applyDisplaySettings();
+});
+
+$("settingWeight").addEventListener("change", () => {
+  localStorage.setItem("eesi-font-weight", $("settingWeight").value);
+  applyDisplaySettings();
+});
+
+$("settingStyle").addEventListener("change", () => {
+  localStorage.setItem("eesi-font-style", $("settingStyle").value);
+  applyDisplaySettings();
+});
+
+$("settingTheme").addEventListener("change", () => {
+  const theme = $("settingTheme").value;
+  localStorage.setItem("eesi-theme", theme);
+  applyTheme(theme);
+});
   $("dtrDate").value = new Date().toISOString().slice(0, 10);
   $("schDate").value = new Date().toISOString().slice(0, 10);
-  applyTheme(localStorage.getItem("eesi-theme") === "dark");
+  const savedTheme = localStorage.getItem("eesi-theme") || "system";
+$("settingTheme").value = savedTheme;
+applyTheme(savedTheme);
+applyDisplaySettings();
   start();
 })();
 </script>
@@ -4879,4 +6253,4 @@ async function loadLiveMap() {
 </script>
 </body>
 </html>
-check if correct or not
+check if correct or not and missing code
