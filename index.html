@@ -1457,11 +1457,13 @@ button:disabled {
     <button id="closeDailyVerseButton" class="btn" type="button">Close</button>
   </div>
 </div>
-  <nav class="bottom">
-    <button type="button" onclick="goBack()">←<br>Back</button>
-    <button id="navHome" class="active" type="button" onclick="go('home')">🏠<br>Home</button>
-    <button id="navChat" type="button" onclick="go('chat')">💬<br>Chat</button>
-  </nav>
+ <nav class="bottom">
+  <button type="button" data-page="home" class="active" onclick="go('home')"><span style="font-size:22px;">🏠</span><br>Home</button>
+  <button type="button" data-page="schedule" onclick="go('schedule')"><span style="font-size:22px;">📅</span><br>Schedule</button>
+  <button type="button" data-page="reports" onclick="go('reports')"><span style="font-size:22px;">📄</span><br>Reports</button>
+  <button type="button" data-page="chat" onclick="go('chat')"><span style="font-size:22px;">💬</span><br>Chat</button>
+  <button type="button" data-page="profile" onclick="go('profile')"><span style="font-size:22px;">👤</span><br>Profile</button>
+</nav>
 </div>
 
 <div id="callScreen" class="call-screen hidden">
