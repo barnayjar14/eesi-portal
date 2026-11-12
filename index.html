@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EESI Ops">
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body.compact .card,
 body.compact .item {
@@ -1600,10 +1600,6 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0, 0, 0, .28); }
     $("dailyVerseOverlay").classList.add("hidden");
   });
 
-  if (!window.supabase) {
-    $("authStatus").textContent = "Could not load the Supabase library. Check your connection and reload.";
-    return;
-  }
 
   const CURRENT_APP_VERSION = "1.0.0";
   const APP_REDIRECT_URL = (function () {
@@ -1611,7 +1607,10 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0, 0, 0, .28); }
     return window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
   })();
 
-  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let client = null;
+if (window.supabase) {
+  client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+}
 
   $("settingNotifications").checked = localStorage.getItem("eesi-notifications") !== "off";
   $("settingVibration").checked = localStorage.getItem("eesi-vibration") === "on";
@@ -2015,27 +2014,24 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0, 0, 0, .28); }
   });
 
   async function start() {
-  // 1. Instantly show the login screen no matter what
+  // 1. Instantly show the login screen, no matter what
   showAuth("Sign in to continue.");
   
-  // 2. Check if the database library actually loaded
-  if (!window.supabase) {
-    setAuthStatus("Database blocked. Check internet connection.");
+  // 2. If database failed to load, warn user but don't crash
+  if (!client) {
+    setAuthStatus("Database blocked by your network. Please refresh or change Wi-Fi.");
     return;
   }
   
-  // 3. Try to log you in automatically in the background
+  // 3. Try to log you in automatically if you have a saved session
   try {
     const { data, error } = await client.auth.getSession();
-    if (error) {
-      console.log("Auth error:", error.message);
-      return;
-    }
+    if (error) return;
     if (data && data.session) {
       await boot(data.session);
     }
   } catch (err) {
-    console.log("Database is slow or blocked by network.");
+    console.log("Database is slow. Please log in manually.");
   }
 }
 
@@ -4327,3 +4323,4 @@ function updateAnnouncementTicker() {
 </script>
 </body>
 </html>
+can you correct still loading but im n{t sign in 
