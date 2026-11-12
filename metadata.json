@@ -1,0 +1,6 @@
+{
+  "name": "EESI Elevators",
+  "description": "Operations console for elevator and escalator maintenance, DTR time tracking, PMS checklists, scheduling, and team communications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
