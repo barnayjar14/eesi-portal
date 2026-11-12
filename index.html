@@ -1760,15 +1760,10 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
     renderLeave();
   }
 
-  /* ---------------- Leave balance (robust) ---------------- */
-
-// Fallback allowances if the RPC doesn't return totals
+/* ---------------- Leave balance (robust) ---------------- */
 const LEAVE_ALLOWANCES = { sick: 15, vacation: 5 };
-
-// Prevent concurrent duplicate loads per (target|user|year)
 const leaveBalanceInFlight = new Map();
 
-// Compute a balance locally from state.leaveRequests — used when the RPC fails
 function computeLocalLeaveBalance(userId, year) {
   const used = { sick: 0, vacation: 0, emergency: 0 };
   state.leaveRequests.forEach(r => {
@@ -1791,24 +1786,14 @@ function computeLocalLeaveBalance(userId, year) {
 }
 
 function leaveBalanceHtml(row) {
-  const num = v => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
+  const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
   const sickTotal     = num(row.sick_total)     || LEAVE_ALLOWANCES.sick;
   const sickUsed      = num(row.sick_used);
-  const sickRemaining = row.sick_remaining != null
-    ? num(row.sick_remaining)
-    : Math.max(0, sickTotal - sickUsed);
-
+  const sickRemaining = row.sick_remaining != null ? num(row.sick_remaining) : Math.max(0, sickTotal - sickUsed);
   const vacTotal     = num(row.vacation_total)     || LEAVE_ALLOWANCES.vacation;
   const vacUsed      = num(row.vacation_used);
-  const vacRemaining = row.vacation_remaining != null
-    ? num(row.vacation_remaining)
-    : Math.max(0, vacTotal - vacUsed);
-
+  const vacRemaining = row.vacation_remaining != null ? num(row.vacation_remaining) : Math.max(0, vacTotal - vacUsed);
   const emergencyUsed = num(row.emergency_used);
-
   return (
     '<div class="item"><b>Sick leave</b><div>' +
       esc(String(sickRemaining)) + ' of ' + esc(String(sickTotal)) + ' workdays left (' +
@@ -1824,35 +1809,25 @@ function leaveBalanceHtml(row) {
 async function renderLeaveBalances(userId = state.userId, targetId = "leaveBalances") {
   const box = $(targetId);
   if (!box || !userId) return;
-
   const year = new Date().getFullYear();
   const key = targetId + "|" + userId + "|" + year;
-  if (leaveBalanceInFlight.has(key)) return;   // dedup concurrent loads
+  if (leaveBalanceInFlight.has(key)) return;
   leaveBalanceInFlight.set(key, true);
-
-  if (!box.dataset.loaded) {
-    box.innerHTML = '<p class="muted">Loading leave balance…</p>';
-  }
-
+  if (!box.dataset.loaded) box.innerHTML = '<p class="muted">Loading leave balance…</p>';
   try {
     let row = null;
     try {
-      const { data, error } = await client.rpc("get_leave_balance", {
-        p_user_id: userId,
-        p_year: year
-      });
+      const { data, error } = await client.rpc("get_leave_balance", { p_user_id: userId, p_year: year });
       if (error) throw error;
-      row = Array.isArray(data) ? data[0] : data;   // handle both shapes
+      row = Array.isArray(data) ? data[0] : data;
     } catch (err) {
       console.warn("get_leave_balance failed, using local fallback:", err?.message || err);
-      row = computeLocalLeaveBalance(userId, year); // graceful fallback
+      row = computeLocalLeaveBalance(userId, year);
     }
-
     if (!row) {
       box.innerHTML = '<p class="muted">No leave balance is available for this account.</p>';
       return;
     }
-
     box.dataset.loaded = "1";
     box.innerHTML = leaveBalanceHtml(row);
   } finally {
@@ -1860,7 +1835,6 @@ async function renderLeaveBalances(userId = state.userId, targetId = "leaveBalan
   }
 }
 
-// Manual refresh hook for the button
 window.refreshLeaveBalances = function () {
   const box = $("leaveBalances");
   if (box) delete box.dataset.loaded;
@@ -1903,7 +1877,6 @@ window.refreshLeaveBalances = function () {
         ).join("") || '<p class="muted">No pending leave requests.</p>';
       }
     }
-    renderLeaveBalances();
   }
 
   async function submitLeaveRequest() {
