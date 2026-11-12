@@ -12,7 +12,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EESI Ops">
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script>eruda.init();</script>
 <style>
   body.compact .card,
 body.compact .item {
@@ -2016,16 +2015,27 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0, 0, 0, .28); }
   });
 
   async function start() {
-  // Force the login screen to show immediately
+  // 1. Instantly show the login screen no matter what
   showAuth("Sign in to continue.");
   
+  // 2. Check if the database library actually loaded
+  if (!window.supabase) {
+    setAuthStatus("Database blocked. Check internet connection.");
+    return;
+  }
+  
+  // 3. Try to log you in automatically in the background
   try {
     const { data, error } = await client.auth.getSession();
-    if (!error && data.session) {
+    if (error) {
+      console.log("Auth error:", error.message);
+      return;
+    }
+    if (data && data.session) {
       await boot(data.session);
     }
   } catch (err) {
-    console.log("Offline mode active");
+    console.log("Database is slow or blocked by network.");
   }
 }
 
