@@ -2676,7 +2676,6 @@ async function handleIncomingMessage() {
         '<td>' + (mine || isAdmin() ? '<button type="button" aria-label="Delete DTR entry" class="red small-btn" data-act="del-dtr" data-id="' + esc(r.id) + '">×</button>' : '') + '</td></tr>';
     }).join("") || '<tr><td colspan="6" class="muted">No DTR entries yet.</td></tr>';
     renderDtrPaper();
-    $("dtrExportHint").textContent = "The half-sheet covers your " + dtrOwn().length + " record(s) for this period.";
   }
 
   function dtrSheetDate(value) {
@@ -2685,20 +2684,27 @@ async function handleIncomingMessage() {
   }
 
   function renderDtrPaper() {
-    const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
-    const body = rows.map(r =>
-      '<tr><td>' + esc(dtrSheetDate(r.work_date)) + '</td><td>' + esc(String(r.location || "").toUpperCase()) + '</td>' +
-      '<td>' + esc(String(r.job || "").toUpperCase()) + '</td><td>' + esc(time12(r.time_in) + " - " + time12(r.time_out)) + '</td><td></td></tr>'
-    ).join("") || '<tr><td colspan="5" class="dp-empty">No DTR entries.</td></tr>';
-    $("dtrPaper").innerHTML =
-      '<table class="dp-table"><colgroup><col style="width:15%"><col style="width:19%"><col style="width:38%"><col style="width:17%"><col style="width:11%"></colgroup>' +
-      '<thead><tr><th colspan="5" class="dp-sheet-title">DAILY TIME RECORD &amp; AUTHORITY TO CONDUCT OVERTIME</th></tr>' +
-      '<tr class="dp-col-head"><th>DATE</th><th>LOCATION</th><th>WORK DESCRIPTION</th><th>TIME START/END</th><th>APPROVED BY:</th></tr></thead>' +
-      '<tbody>' + body + '</tbody></table>' +
-      '<div class="dp-employee-sign"><img alt="Employee signature" src="' + $("signature").toDataURL("image/png") + '">' +
-      '<div class="dp-employee-name">' + esc(employeeDisplayName()) + '</div>' +
-      '<div class="dp-employee-caption">Signature Over Printed Name of Employee</div></div>';
+  const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+  const body = rows.map(r =>
+    '<tr><td>' + esc(dtrSheetDate(r.work_date)) + '</td><td>' + esc(String(r.location || "").toUpperCase()) + '</td>' +
+    '<td>' + esc(String(r.job || "").toUpperCase()) + '</td><td>' + esc(time12(r.time_in) + " - " + time12(r.time_out)) + '</td><td></td></tr>'
+  ).join("") || '<tr><td colspan="5" class="dp-empty">No DTR entries.</td></tr>';
+  const sigSrc = getActiveSignatureSrc();
+  $("dtrPaper").innerHTML =
+    '<table class="dp-table"><colgroup><col style="width:15%"><col style="width:19%"><col style="width:38%"><col style="width:17%"><col style="width:11%"></colgroup>' +
+    '<thead><tr><th colspan="5" class="dp-sheet-title">DAILY TIME RECORD &amp; AUTHORITY TO CONDUCT OVERTIME</th></tr>' +
+    '<tr class="dp-col-head"><th>DATE</th><th>LOCATION</th><th>WORK DESCRIPTION</th><th>TIME START/END</th><th>APPROVED BY:</th></tr></thead>' +
+    '<tbody>' + body + '</tbody></table>' +
+    '<div class="dp-employee-sign"><img alt="Employee signature" src="' + sigSrc + '">' +
+    '<div class="dp-employee-name">' + esc(employeeDisplayName()) + '</div>' +
+    '<div class="dp-employee-caption">Signature Over Printed Name of Employee</div></div>';
+  const hint = $("dtrExportHint");
+  if (hint) {
+    hint.textContent = "The half-sheet covers your " + dtrOwn().length +
+      " record(s) for this period. Signature source: " +
+      (signaturePhotoDataUrl ? "uploaded picture" : "drawn signature") + ".";
   }
+}
 
   function dtrTab(tab) {
     const fill = tab === "fill";
@@ -3537,6 +3543,12 @@ async function handleIncomingMessage() {
     $("signaturePhotoPreview").classList.add("hidden");
   }
   window.clearSignaturePhoto = clearSignaturePhoto;
+  
+  
+function getActiveSignatureSrc() {
+  if (signaturePhotoDataUrl) return signaturePhotoDataUrl;
+  return $("signature").toDataURL("image/png");
+}
 
   ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#16233a";
   function point(e) {
@@ -3556,67 +3568,87 @@ async function handleIncomingMessage() {
   function clearSignature() { ctx.clearRect(0, 0, sig.width, sig.height); }
   window.clearSignature = clearSignature;
 
-  function downloadDtr() {
-    const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
-    if (!rows.length) return toast("No DTR records to export");
-    drawDtrCanvas(rows);
+  async function downloadDtr() {
+  const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+  if (!rows.length) return toast("No DTR records to export");
+  await drawDtrCanvas(rows);
+}
+
+  async function drawDtrCanvas(rows) {
+  const c = document.createElement("canvas");
+  const x = c.getContext("2d");
+  const left = 12, width = 1076;
+  const cols = [12, 173, 378, 787, 970, 1088];
+  const headings = ["DATE", "LOCATION", "WORK DESCRIPTION", "TIME START/END", "APPROVED BY:"];
+  function wrap(text, maxWidth) {
+    const lines = []; let line = "";
+    for (const word of String(text).split(/\s+/)) {
+      const candidate = line ? line + " " + word : word;
+      if (line && x.measureText(candidate).width > maxWidth) { lines.push(line); line = word; }
+      else line = candidate;
+    }
+    lines.push(line); return lines;
+  }
+  c.width = 1100;
+  x.font = 'bold 14px "Times New Roman"';
+  const layouts = rows.map(r => {
+    const values = [dtrSheetDate(r.work_date), String(r.location || "").toUpperCase(), String(r.job || "").toUpperCase(), time12(r.time_in) + " - " + time12(r.time_out), ""];
+    const lines = values.map((v, i) => wrap(v, cols[i + 1] - cols[i] - 10));
+    return { lines, height: Math.max(32, Math.max(...lines.map(a => a.length)) * 17 + 8) };
+  });
+  c.height = 88 + layouts.reduce((s, r) => s + r.height, 0) + 135;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+  x.strokeStyle = "#000"; x.lineWidth = 1.5; x.fillStyle = "#000"; x.textAlign = "center"; x.textBaseline = "middle";
+  x.strokeRect(left, 12, width, 40);
+  x.font = 'bold 26px "Times New Roman"';
+  x.fillText("DAILY TIME RECORD & AUTHORITY TO CONDUCT OVERTIME", 550, 32, width - 12);
+  x.font = 'bold italic 15px "Times New Roman"';
+  headings.forEach((h, i) => {
+    x.strokeRect(cols[i], 52, cols[i + 1] - cols[i], 32);
+    x.fillText(h, (cols[i] + cols[i + 1]) / 2, 68, cols[i + 1] - cols[i] - 6);
+  });
+  x.font = 'bold 14px "Times New Roman"';
+  let y = 84;
+  layouts.forEach(r => {
+    r.lines.forEach((lines, i) => {
+      const cw = cols[i + 1] - cols[i];
+      x.strokeRect(cols[i], y, cw, r.height);
+      const firstY = y + r.height / 2 - (lines.length - 1) * 17 / 2;
+      lines.forEach((line, n) => x.fillText(line, (cols[i] + cols[i + 1]) / 2, firstY + n * 17, cw - 8));
+    });
+    y += r.height;
+  });
+
+  // Signature: prefer uploaded photo, fall back to drawn canvas
+  const sigSrc = getActiveSignatureSrc();
+  if (sigSrc) {
+    const sigImg = new Image();
+    const loaded = await new Promise(resolve => {
+      sigImg.onload = () => resolve(true);
+      sigImg.onerror = () => resolve(false);
+      sigImg.src = sigSrc;
+    });
+    if (loaded && sigImg.naturalWidth > 0) {
+      const ratio = sigImg.naturalWidth / sigImg.naturalHeight;
+      let dw = 250, dh = 65;
+      if (dw / dh > ratio) dw = dh * ratio;
+      else dh = dw / ratio;
+      const dx = 70 + (250 - dw) / 2;
+      const dy = y + 4 + (65 - dh) / 2;
+      x.drawImage(sigImg, dx, dy, dw, dh);
+    }
   }
 
-  function drawDtrCanvas(rows) {
-    const c = document.createElement("canvas");
-    const x = c.getContext("2d");
-    const left = 12, width = 1076;
-    const cols = [12, 173, 378, 787, 970, 1088];
-    const headings = ["DATE", "LOCATION", "WORK DESCRIPTION", "TIME START/END", "APPROVED BY:"];
-    function wrap(text, maxWidth) {
-      const lines = []; let line = "";
-      for (const word of String(text).split(/\s+/)) {
-        const candidate = line ? line + " " + word : word;
-        if (line && x.measureText(candidate).width > maxWidth) { lines.push(line); line = word; }
-        else line = candidate;
-      }
-      lines.push(line); return lines;
-    }
-    c.width = 1100;
-    x.font = 'bold 14px "Times New Roman"';
-    const layouts = rows.map(r => {
-      const values = [dtrSheetDate(r.work_date), String(r.location || "").toUpperCase(), String(r.job || "").toUpperCase(), time12(r.time_in) + " - " + time12(r.time_out), ""];
-      const lines = values.map((v, i) => wrap(v, cols[i + 1] - cols[i] - 10));
-      return { lines, height: Math.max(32, Math.max(...lines.map(a => a.length)) * 17 + 8) };
-    });
-    c.height = 88 + layouts.reduce((s, r) => s + r.height, 0) + 135;
-    x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
-    x.strokeStyle = "#000"; x.lineWidth = 1.5; x.fillStyle = "#000"; x.textAlign = "center"; x.textBaseline = "middle";
-    x.strokeRect(left, 12, width, 40);
-    x.font = 'bold 26px "Times New Roman"';
-    x.fillText("DAILY TIME RECORD & AUTHORITY TO CONDUCT OVERTIME", 550, 32, width - 12);
-    x.font = 'bold italic 15px "Times New Roman"';
-    headings.forEach((h, i) => {
-      x.strokeRect(cols[i], 52, cols[i + 1] - cols[i], 32);
-      x.fillText(h, (cols[i] + cols[i + 1]) / 2, 68, cols[i + 1] - cols[i] - 6);
-    });
-    x.font = 'bold 14px "Times New Roman"';
-    let y = 84;
-    layouts.forEach(r => {
-      r.lines.forEach((lines, i) => {
-        const cw = cols[i + 1] - cols[i];
-        x.strokeRect(cols[i], y, cw, r.height);
-        const firstY = y + r.height / 2 - (lines.length - 1) * 17 / 2;
-        lines.forEach((line, n) => x.fillText(line, (cols[i] + cols[i + 1]) / 2, firstY + n * 17, cw - 8));
-      });
-      y += r.height;
-    });
-    x.drawImage(sig, 70, y + 4, 250, 65);
-    x.font = "bold 15px Arial";
-    x.fillText(employeeDisplayName(), 205, y + 80, 350);
-    x.beginPath(); x.moveTo(12, y + 92); x.lineTo(398, y + 92); x.moveTo(12, y + 95); x.lineTo(398, y + 95); x.stroke();
-    x.font = "bold italic 13px Arial";
-    x.fillText("Signature Over Printed Name of Employee", 205, y + 110);
-    const a = document.createElement("a");
-    a.download = "eesi-dtr-" + new Date().toISOString().slice(0, 10) + ".jpg";
-    a.href = c.toDataURL("image/jpeg", 0.95);
-    a.click();
-  }
+  x.font = "bold 15px Arial";
+  x.fillText(employeeDisplayName(), 205, y + 80, 350);
+  x.beginPath(); x.moveTo(12, y + 92); x.lineTo(398, y + 92); x.moveTo(12, y + 95); x.lineTo(398, y + 95); x.stroke();
+  x.font = "bold italic 13px Arial";
+  x.fillText("Signature Over Printed Name of Employee", 205, y + 110);
+  const a = document.createElement("a");
+  a.download = "eesi-dtr-" + new Date().toISOString().slice(0, 10) + ".jpg";
+  a.href = c.toDataURL("image/jpeg", 0.95);
+  a.click();
+}
 
   function printDtr() {
     if (!dtrOwn().length) return toast("No DTR records");
