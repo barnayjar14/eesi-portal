@@ -6501,6 +6501,125 @@ $("settingTheme").addEventListener("change", () => {
 $("settingTheme").value = savedTheme;
 applyTheme(savedTheme);
 applyDisplaySettings();
+/* ============================================================
+   MOBILE NATIVE GESTURES & FEEL
+   ============================================================ */
+
+let lastTouchEnd = 0;
+document.addEventListener("touchend", (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+function haptic(ms = 10) {
+  if ("vibrate" in navigator && localStorage.getItem("eesi-vibration") === "on") {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button, .thread-row, .person, .tile, .stat");
+  if (t && !t.disabled) haptic(8);
+}, { passive: true });
+
+let ptrStartY = 0;
+let ptrPulling = false;
+let ptrIndicator = null;
+
+function ensurePtrIndicator() {
+  if (!ptrIndicator) {
+    ptrIndicator = document.createElement("div");
+    ptrIndicator.id = "ptr-indicator";
+    ptrIndicator.innerHTML = "↓";
+    document.body.appendChild(ptrIndicator);
+  }
+  return ptrIndicator;
+}
+
+document.addEventListener("touchstart", (e) => {
+  if (window.scrollY === 0) {
+    ptrStartY = e.touches[0].clientY;
+    ptrPulling = true;
+  }
+}, { passive: true });
+
+document.addEventListener("touchmove", (e) => {
+  if (!ptrPulling || window.scrollY > 0) return;
+  const dy = e.touches[0].clientY - ptrStartY;
+  if (dy > 60) {
+    const ind = ensurePtrIndicator();
+    ind.classList.add("active");
+    ind.innerHTML = dy > 120 ? "↻" : "↓";
+  }
+}, { passive: true });
+
+document.addEventListener("touchend", async (e) => {
+  if (!ptrPulling) return;
+  const dy = (e.changedTouches[0]?.clientY || 0) - ptrStartY;
+  ptrPulling = false;
+  if (dy > 120) {
+    const ind = ensurePtrIndicator();
+    ind.classList.add("active", "spinning");
+    haptic(20);
+    try {
+      if (typeof reloadEverything === "function") await reloadEverything();
+    } catch (err) {}
+    setTimeout(() => {
+      ind.classList.remove("active", "spinning");
+    }, 400);
+  } else if (ptrIndicator) {
+    ptrIndicator.classList.remove("active");
+  }
+}, { passive: true });
+
+let swStartX = 0;
+let swStartY = 0;
+let swTracking = false;
+
+document.addEventListener("touchstart", (e) => {
+  swStartX = e.touches[0].clientX;
+  swStartY = e.touches[0].clientY;
+  swTracking = swStartX < 40;
+}, { passive: true });
+
+document.addEventListener("touchend", (e) => {
+  if (!swTracking) return;
+  const dx = (e.changedTouches[0]?.clientX || 0) - swStartX;
+  const dy = Math.abs((e.changedTouches[0]?.clientY || 0) - swStartY);
+  if (dx > 80 && dy < 50) {
+    haptic(10);
+    if (typeof closeChat === "function" && !document.getElementById("activeChat").classList.contains("hidden")) {
+      closeChat();
+    } else if (typeof closeSheet === "function" && !document.getElementById("sheet").classList.contains("hidden")) {
+      closeSheet();
+    } else if (typeof closeCompose === "function" && !document.getElementById("chatCompose").classList.contains("hidden")) {
+      closeCompose();
+    } else if (typeof closeChatInfo === "function" && !document.getElementById("chatInfo").classList.contains("hidden")) {
+      closeChatInfo();
+    } else if (typeof goBack === "function") {
+      goBack();
+    }
+  }
+  swTracking = false;
+}, { passive: true });
+
+document.addEventListener("focusin", (e) => {
+  const t = e.target;
+  if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") {
+    setTimeout(() => {
+      t.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 250);
+  }
+});
+
+function setAppVh() {
+  document.documentElement.style.setProperty("--app-vh", window.innerHeight * 0.01 + "px");
+}
+setAppVh();
+window.addEventListener("resize", setAppVh);
+window.addEventListener("orientationchange", () => setTimeout(setAppVh, 100));
+
   start();
 })();
 </script>
