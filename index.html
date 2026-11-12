@@ -1760,22 +1760,112 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
     renderLeave();
   }
 
-  async function renderLeaveBalances(userId = state.userId, targetId = "leaveBalances") {
-    const box = $(targetId);
-    if (!box || !userId) return;
+  /* ---------------- Leave balance (robust) ---------------- */
+
+// Fallback allowances if the RPC doesn't return totals
+const LEAVE_ALLOWANCES = { sick: 15, vacation: 5 };
+
+// Prevent concurrent duplicate loads per (target|user|year)
+const leaveBalanceInFlight = new Map();
+
+// Compute a balance locally from state.leaveRequests — used when the RPC fails
+function computeLocalLeaveBalance(userId, year) {
+  const used = { sick: 0, vacation: 0, emergency: 0 };
+  state.leaveRequests.forEach(r => {
+    if (r.user_id !== userId) return;
+    if (r.status !== "approved") return;
+    const y = new Date(String(r.start_date || "") + "T00:00:00").getFullYear();
+    if (y !== year) return;
+    const days = Number(r.workdays) || 0;
+    if (used[r.leave_type] != null) used[r.leave_type] += days;
+  });
+  return {
+    sick_total: LEAVE_ALLOWANCES.sick,
+    sick_used: used.sick,
+    sick_remaining: Math.max(0, LEAVE_ALLOWANCES.sick - used.sick),
+    vacation_total: LEAVE_ALLOWANCES.vacation,
+    vacation_used: used.vacation,
+    vacation_remaining: Math.max(0, LEAVE_ALLOWANCES.vacation - used.vacation),
+    emergency_used: used.emergency
+  };
+}
+
+function leaveBalanceHtml(row) {
+  const num = v => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const sickTotal     = num(row.sick_total)     || LEAVE_ALLOWANCES.sick;
+  const sickUsed      = num(row.sick_used);
+  const sickRemaining = row.sick_remaining != null
+    ? num(row.sick_remaining)
+    : Math.max(0, sickTotal - sickUsed);
+
+  const vacTotal     = num(row.vacation_total)     || LEAVE_ALLOWANCES.vacation;
+  const vacUsed      = num(row.vacation_used);
+  const vacRemaining = row.vacation_remaining != null
+    ? num(row.vacation_remaining)
+    : Math.max(0, vacTotal - vacUsed);
+
+  const emergencyUsed = num(row.emergency_used);
+
+  return (
+    '<div class="item"><b>Sick leave</b><div>' +
+      esc(String(sickRemaining)) + ' of ' + esc(String(sickTotal)) + ' workdays left (' +
+      esc(String(sickUsed)) + ' used)</div></div>' +
+    '<div class="item"><b>Vacation leave</b><div>' +
+      esc(String(vacRemaining)) + ' of ' + esc(String(vacTotal)) + ' workdays left (' +
+      esc(String(vacUsed)) + ' used)</div></div>' +
+    '<div class="item"><b>Emergency leave</b><div>' +
+      esc(String(emergencyUsed)) + ' workday(s) used this year</div></div>'
+  );
+}
+
+async function renderLeaveBalances(userId = state.userId, targetId = "leaveBalances") {
+  const box = $(targetId);
+  if (!box || !userId) return;
+
+  const year = new Date().getFullYear();
+  const key = targetId + "|" + userId + "|" + year;
+  if (leaveBalanceInFlight.has(key)) return;   // dedup concurrent loads
+  leaveBalanceInFlight.set(key, true);
+
+  if (!box.dataset.loaded) {
     box.innerHTML = '<p class="muted">Loading leave balance…</p>';
-    const { data, error } = await client.rpc("get_leave_balance", { p_user_id: userId, p_year: new Date().getFullYear() });
-    if (error) {
-      box.innerHTML = '<p class="muted">Could not load leave balance: ' + esc(error.message) + '</p>';
+  }
+
+  try {
+    let row = null;
+    try {
+      const { data, error } = await client.rpc("get_leave_balance", {
+        p_user_id: userId,
+        p_year: year
+      });
+      if (error) throw error;
+      row = Array.isArray(data) ? data[0] : data;   // handle both shapes
+    } catch (err) {
+      console.warn("get_leave_balance failed, using local fallback:", err?.message || err);
+      row = computeLocalLeaveBalance(userId, year); // graceful fallback
+    }
+
+    if (!row) {
+      box.innerHTML = '<p class="muted">No leave balance is available for this account.</p>';
       return;
     }
-    const b = data && data[0];
-    if (!b) { box.innerHTML = '<p class="muted">No balance available for this account.</p>'; return; }
-    box.innerHTML =
-      '<div class="item"><b>Sick leave</b><div>' + esc(String(b.sick_remaining)) + ' of 15 workdays left (' + esc(String(b.sick_used)) + ' used)</div></div>' +
-      '<div class="item"><b>Vacation leave</b><div>' + esc(String(b.vacation_remaining)) + ' of 5 workdays left (' + esc(String(b.vacation_used)) + ' used)</div></div>' +
-      '<div class="item"><b>Emergency leave</b><div>' + esc(String(b.emergency_used)) + ' workday(s) used this year</div></div>';
+
+    box.dataset.loaded = "1";
+    box.innerHTML = leaveBalanceHtml(row);
+  } finally {
+    leaveBalanceInFlight.delete(key);
   }
+}
+
+// Manual refresh hook for the button
+window.refreshLeaveBalances = function () {
+  const box = $("leaveBalances");
+  if (box) delete box.dataset.loaded;
+  renderLeaveBalances();
+};
 
   function leaveTypeLabel(type) {
     return ({ sick: "Sick leave", vacation: "Vacation leave", emergency: "Emergency leave" })[type] || type;
