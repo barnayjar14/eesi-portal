@@ -1160,6 +1160,11 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
   };
   let editingReportId = null;
   let authRun = 0;
+  
+/* Suppress notification sounds for our own actions (submit report, approve member, etc.) */
+let suppressNotificationsUntil = 0;
+function suppressNotifications(ms = 5000) { suppressNotificationsUntil = Date.now() + ms; }
+function isWithinSelfActionWindow() { return Date.now() < suppressNotificationsUntil; }
   let recoveryMode = false;
   let realtimeChannel = null;
   let presenceChannel = null;
@@ -2054,7 +2059,7 @@ window.refreshLeaveBalances = function () {
     state.appNotifications = data || [];
     appNotificationsLoaded = true;
     renderAppNotifications();
-    if (newItems.length && notificationSettings().enabled) playSettingSound();
+    if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
   }
 
   async function loadApprovalNotifications() {
@@ -2071,7 +2076,7 @@ window.refreshLeaveBalances = function () {
     state.approvalNotifications = data || [];
     approvalNotificationsLoaded = true;
     renderNotices();
-    if (newItems.length && notificationSettings().enabled) playSettingSound();
+ if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
   }
   function renderAppNotifications() { renderNotices(); }
 
@@ -2334,31 +2339,89 @@ window.refreshLeaveBalances = function () {
       updateAccess(); renderAll();
       if (isManager()) loadRoles();
     }
+  async function handleIncomingMessage() {
+  if (!state.userId) return;
+
+  const previousIds = new Set(state.messages.map(m => String(m.id)));
+  const previousUnread = { ...state.unread };
+
+  await loadPreviews();
+  await loadThreads();
+
+  let activeIncoming = [];
+
+  if (state.activeThread) {
+    const { data, error } = await client.from("messages")
+      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+      .eq("thread_id", state.activeThread)
+      .order("created_at", { ascending: true })
+      .limit(300);
+    if (!error) {
+      activeIncoming = (data || []).filter(m => m.user_id !== state.userId && !previousIds.has(String(m.id)));
+      state.messages = data || [];
+      renderMessages();
+      markThreadRead(state.activeThread);
+    }
   }
 
-  async function handleIncomingMessage() {
-    if (!state.userId) return;
-    const previousIds = new Set(state.messages.map(m => String(m.id)));
-    await loadPreviews();
-    await loadThreads();
-    let incomingMessages = [];
-    if (state.activeThread) {
-      const { data, error } = await client.from("messages")
-        .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
-        .eq("thread_id", state.activeThread)
-        .order("created_at", { ascending: true }).limit(300);
-      if (!error) {
-        incomingMessages = (data || []).filter(m => m.user_id !== state.userId && !previousIds.has(String(m.id)));
-        state.messages = data || [];
-        renderMessages();
-        markThreadRead(state.activeThread);
-      }
-    } else {
-      await loadUnread();
-    }
-    if (incomingMessages.length) playSettingSound();
-    renderChatList();
+  await loadUnread();
+
+  const unreadIncreased = Object.keys(state.unread).some(id => {
+    if (id === state.activeThread) return false;
+    if (isMuted(id)) return false;
+    return (state.unread[id] || 0) > (previousUnread[id] || 0);
+  });
+
+  const activeNewUnmuted = !!state.activeThread && !isMuted(state.activeThread) && activeIncoming.length > 0;
+
+  if ((unreadIncreased || activeNewUnmuted) && !isWithinSelfActionWindow()) {
+    playSettingSound();
   }
+
+  renderChatList();
+}
+
+async function handleIncomingMessage() {
+  if (!state.userId) return;
+
+  const previousIds = new Set(state.messages.map(m => String(m.id)));
+  const previousUnread = { ...state.unread };
+
+  await loadPreviews();
+  await loadThreads();
+
+  let activeIncoming = [];
+
+  if (state.activeThread) {
+    const { data, error } = await client.from("messages")
+      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+      .eq("thread_id", state.activeThread)
+      .order("created_at", { ascending: true })
+      .limit(300);
+    if (!error) {
+      activeIncoming = (data || []).filter(m => m.user_id !== state.userId && !previousIds.has(String(m.id)));
+      state.messages = data || [];
+      renderMessages();
+      markThreadRead(state.activeThread);
+    }
+  }
+
+  await loadUnread();
+
+  const unreadIncreased = Object.keys(state.unread).some(id => {
+    if (id === state.activeThread) return false;
+    if (isMuted(id)) return false;
+    return (state.unread[id] || 0) > (previousUnread[id] || 0);
+  });
+
+  const activeNewUnmuted = !!state.activeThread && !isMuted(state.activeThread) && activeIncoming.length > 0;
+
+  if ((unreadIncreased || activeNewUnmuted) && !isWithinSelfActionWindow()) {
+    playSettingSound();
+  }
+
+  renderChatList();
+}
 
   window.addEventListener("online", () => { if (state.userId) { startLive(); reloadEverything(); } });
   window.addEventListener("offline", () => setLive(false));
@@ -3343,6 +3406,7 @@ window.refreshLeaveBalances = function () {
     if (recipientsError) return toast("Member approved, but notification recipients could not be loaded: " + recipientsError.message);
 
     const recipientIds = [...new Set([req.user_id, ...(recipients || []).map(row => row.user_id)])];
+    suppressNotifications();   // ← don't ding for the approval you just did
     const { error: notificationError } = await client
       .from("approval_notifications")
       .insert(recipientIds.map(recipient_user_id => ({
@@ -4344,6 +4408,7 @@ window.refreshLeaveBalances = function () {
     }
     $("submitReportButton").disabled = true;
     $("reportStatus").textContent = editingReportId ? "Saving report changes…" : "Uploading photos and submitting…";
+    suppressNotifications();   // ← don't ding for the report you just sent
     try {
       const photoLinks = [];
       const existingReport = editingReportId ? state.reports.find(report => String(report.id) === String(editingReportId)) : null;
