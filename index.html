@@ -4989,7 +4989,8 @@ async function permanentlyDeleteUser(userId) {
         infoRow("💬", "Typing indicator", "Not available yet", "planned", "typing") +
         infoRow("⛔", "Block a member", "Not available yet", "planned", "block") +
         infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
-        infoRow("🚪", "Leave chat", "", "chat-leave", t.id, "danger"));
+infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger") +
+infoRow("🚪", "Leave chat", "", "chat-leave", t.id, "danger"));
   }
   function renderChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
@@ -5328,7 +5329,7 @@ async function permanentlyDeleteUser(userId) {
       case "chat-members": openMembersSheet(id); return true;
       case "chat-add": openAddSheet(id); return true;
       case "chat-add-save": addMembers(id); return true;
-      case "chat-delete": openSheet(confirmHtml("Delete this chat?", "It is removed from this device. It comes back when someone sends a new message.", "chat-delete-yes", id)); return true;
+      case "chat-delete": openSheet(confirmHtml("Delete entire conversation?", "This removes the conversation from your device. It will reappear if someone sends a new message.", "chat-delete-yes", id)); return true;
       case "chat-delete-yes": setPref(id, { hiddenAt: new Date().toISOString() }); closeSheet(); closeChat(); return true;
       case "chat-leave": openSheet(confirmHtml("Leave this group?", "You stop getting its messages. Another member has to add you back.", "chat-leave-yes", id)); return true;
       case "chat-leave-yes": leaveGroup(id); return true;
