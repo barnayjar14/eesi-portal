@@ -2222,18 +2222,21 @@ window.refreshLeaveBalances = function () {
     state.unread = counts;
     renderHome(); renderNotices(); renderChatList();
   }
-  async function loadMessages(threadId) {
-    const { data, error } = await client.from("messages")
-      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
-      .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
-    if (error) { toast("Could not load messages: " + error.message); return; }
-    state.messages = data || [];
-    renderMessages();
-    if (state.messages.some(m => m.user_id !== state.userId)) {
-      const { error: deliveryError } = await client.rpc("mark_thread_messages_delivered", { p_thread_id: threadId });
-      if (deliveryError) console.warn("Could not mark messages delivered:", deliveryError.message);
-    }
+  let activeThreadToken = 0;
+
+async function loadMessages(threadId) {
+  const { data, error } = await client.from("messages")
+    .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+    .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
+  if (state.activeThread !== threadId) return;   // ← race guard
+  if (error) { toast("Could not load messages: " + error.message); return; }
+  state.messages = data || [];
+  renderMessages();
+  if (state.messages.some(m => m.user_id !== state.userId)) {
+    const { error: deliveryError } = await client.rpc("mark_thread_messages_delivered", { p_thread_id: threadId });
+    if (deliveryError) console.warn("Could not mark messages delivered:", deliveryError.message);
   }
+}
 
   window.applyAppUpdate = function () {
     if (window.caches) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
@@ -2342,25 +2345,26 @@ window.refreshLeaveBalances = function () {
   async function handleIncomingMessage() {
   if (!state.userId) return;
 
-  const previousIds = new Set(state.messages.map(m => String(m.id)));
   const previousUnread = { ...state.unread };
 
   await loadPreviews();
   await loadThreads();
 
   let activeIncoming = [];
+  const thread = state.activeThread;   // ← capture before awaits
 
-  if (state.activeThread) {
+  if (thread) {
     const { data, error } = await client.from("messages")
       .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
-      .eq("thread_id", state.activeThread)
+      .eq("thread_id", thread)
       .order("created_at", { ascending: true })
       .limit(300);
-    if (!error) {
+    if (!error && state.activeThread === thread) {   // ← user hasn't switched threads
+      const previousIds = new Set(state.messages.map(m => String(m.id)));
       activeIncoming = (data || []).filter(m => m.user_id !== state.userId && !previousIds.has(String(m.id)));
       state.messages = data || [];
       renderMessages();
-      markThreadRead(state.activeThread);
+      markThreadRead(thread);
     }
   }
 
@@ -3055,28 +3059,31 @@ async function handleIncomingMessage() {
   }
 
   async function openThread(id) {
-    const t = state.threads.find(x => x.id === id);
-    if (!t) return;
-    state.activeThread = id;
-    state.messages = [];
-    go("chat");
-    $("chatCompose").classList.add("hidden");
-    $("chatInfo").classList.add("hidden");
-    $("chatBrowser").classList.add("hidden");
-    $("activeChat").classList.remove("hidden");
-    $("chatTitle").textContent = threadTitle(t);
-    $("callAudioBtn").classList.toggle("hidden", t.kind !== "direct");
-    $("callVideoBtn").classList.toggle("hidden", t.kind !== "direct");
-    $("chatHeadAv").innerHTML = threadAvatar(t);
-    const other = t.kind === "direct" ? threadMembers(t).find(m => m.user_id !== state.userId) : null;
-    $("chatStatus").textContent = t.kind === "group"
-      ? threadMembers(t).length + " members"
-      : (other && onlineIds().has(other.user_id) ? "Active now" : "Offline");
-    $("messages").innerHTML = '<p class="muted">Loading messages…</p>';
-    await loadMessages(id);
-    markThreadRead(id);
-    renderChatList();
-  }
+  const t = state.threads.find(x => x.id === id);
+  if (!t) return;
+  const myToken = ++activeThreadToken;             // ← new: remember this request
+  state.activeThread = id;
+  state.messages = [];
+  go("chat");
+  $("chatCompose").classList.add("hidden");
+  $("chatInfo").classList.add("hidden");
+  $("chatBrowser").classList.add("hidden");
+  $("activeChat").classList.remove("hidden");
+  $("chatTitle").textContent = threadTitle(t);
+  $("callAudioBtn").classList.toggle("hidden", t.kind !== "direct");
+  $("callVideoBtn").classList.toggle("hidden", t.kind !== "direct");
+  $("chatHeadAv").innerHTML = threadAvatar(t);
+  const other = t.kind === "direct" ? threadMembers(t).find(m => m.user_id !== state.userId) : null;
+  $("chatStatus").textContent = t.kind === "group"
+    ? threadMembers(t).length + " members"
+    : (other && onlineIds().has(other.user_id) ? "Active now" : "Offline");
+  $("messages").innerHTML = '<p class="muted">Loading messages…</p>';
+  await loadMessages(id);
+  if (myToken !== activeThreadToken) return;       // ← user opened another chat while loading
+  if (state.activeThread !== id) return;           // ← user tapped back / closed while loading
+  markThreadRead(id);
+  renderChatList();
+}
 
   async function openDirect(otherId) {
     if (!state.userId) return toast("Sign in first");
@@ -3095,14 +3102,14 @@ async function handleIncomingMessage() {
   }
 
   function closeChat() {
-    state.activeThread = null;
-    state.messages = [];
-    $("activeChat").classList.add("hidden");
-    $("chatCompose").classList.add("hidden");
-    $("chatInfo").classList.add("hidden");
-    $("chatBrowser").classList.remove("hidden");
-    renderChatList();
-  }
+  state.activeThread = null;
+  state.messages = [];
+  $("activeChat").classList.add("hidden");
+  $("chatCompose").classList.add("hidden");
+  $("chatInfo").classList.add("hidden");
+  $("chatBrowser").classList.remove("hidden");
+  renderChatList();
+}
   window.closeChat = closeChat;
 
   function showGroupForm() {
