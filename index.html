@@ -2059,10 +2059,11 @@ window.refreshLeaveBalances = function () {
     state.appNotifications = data || [];
     appNotificationsLoaded = true;
     renderAppNotifications();
-    if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
+      if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
   }
+}
 
-  async function loadApprovalNotifications() {
+async function loadApprovalNotifications() {
     if (!state.userId) return;
     const { data, error } = await client
       .from("approval_notifications")
@@ -2077,8 +2078,9 @@ window.refreshLeaveBalances = function () {
     approvalNotificationsLoaded = true;
     renderNotices();
  if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
-  }
-  function renderAppNotifications() { renderNotices(); }
+   }
+ }
+ function renderAppNotifications() { renderNotices(); }
 
   function renderReports() {
     if (!$("reportList")) return;
@@ -2339,10 +2341,11 @@ async function loadMessages(threadId) {
     if (data.app_role !== state.role) {
       state.role = data.app_role;
       $("roleLabel").textContent = roleLabel(state.role);
-      updateAccess(); renderAll();
-      if (isManager()) loadRoles();
-    }
-  async function handleIncomingMessage() {
+          updateAccess(); renderAll();
+    if (isManager()) loadRoles();
+  }
+}
+async function handleIncomingMessage() {
   if (!state.userId) return;
 
   const previousUnread = { ...state.unread };
@@ -2365,48 +2368,6 @@ async function loadMessages(threadId) {
       state.messages = data || [];
       renderMessages();
       markThreadRead(thread);
-    }
-  }
-
-  await loadUnread();
-
-  const unreadIncreased = Object.keys(state.unread).some(id => {
-    if (id === state.activeThread) return false;
-    if (isMuted(id)) return false;
-    return (state.unread[id] || 0) > (previousUnread[id] || 0);
-  });
-
-  const activeNewUnmuted = !!state.activeThread && !isMuted(state.activeThread) && activeIncoming.length > 0;
-
-  if ((unreadIncreased || activeNewUnmuted) && !isWithinSelfActionWindow()) {
-    playSettingSound();
-  }
-
-  renderChatList();
-}
-
-async function handleIncomingMessage() {
-  if (!state.userId) return;
-
-  const previousIds = new Set(state.messages.map(m => String(m.id)));
-  const previousUnread = { ...state.unread };
-
-  await loadPreviews();
-  await loadThreads();
-
-  let activeIncoming = [];
-
-  if (state.activeThread) {
-    const { data, error } = await client.from("messages")
-      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
-      .eq("thread_id", state.activeThread)
-      .order("created_at", { ascending: true })
-      .limit(300);
-    if (!error) {
-      activeIncoming = (data || []).filter(m => m.user_id !== state.userId && !previousIds.has(String(m.id)));
-      state.messages = data || [];
-      renderMessages();
-      markThreadRead(state.activeThread);
     }
   }
 
@@ -3102,6 +3063,7 @@ async function handleIncomingMessage() {
   }
 
   function closeChat() {
+  activeThreadToken++;
   state.activeThread = null;
   state.messages = [];
   $("activeChat").classList.add("hidden");
