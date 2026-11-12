@@ -849,11 +849,14 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
         <button class="btn" type="button" onclick="saveProfile()">Save profile</button>
       </div>
       <div class="card">
-        <h2 style="margin-top:0">Annual leave balance</h2>
-        <p class="muted">Approved leave for the current calendar year. Workdays are Monday to Friday; holidays are not excluded.</p>
-        <div id="leaveBalances"><p class="muted">Loading balances…</p></div>
-        <button class="btn" type="button" onclick="go('leave')">Request leave</button>
-      </div>
+  <h2 style="margin-top:0">Annual leave balance</h2>
+  <p class="muted">Approved leave for the current calendar year. Workdays are Monday to Friday; holidays are not excluded.</p>
+  <div id="leaveBalances"><p class="muted">Loading balances…</p></div>
+  <div class="inline-actions">
+    <button class="btn" type="button" onclick="go('leave')">Request leave</button>
+    <button class="gray small-btn" type="button" onclick="refreshLeaveBalances()">Refresh balance</button>
+  </div>
+</div>
     </div></section>
 
     <section class="page hidden" id="page-leave">
@@ -1743,22 +1746,28 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
     renderAssigneesPicker();
   }
 
-  async function loadLeaveRequests() {
-    if (!state.userId) return;
-    const { data, error } = await client
-      .from("leave_requests")
-      .select("id,user_id,leave_type,start_date,end_date,calendar_days,workdays,reason,status,reviewed_by,reviewed_at,review_note,created_at")
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("Could not load leave requests:", error);
-      if ($("myLeaveRequests")) {
-        $("myLeaveRequests").innerHTML = '<p class="muted">Could not load leave requests: ' + esc(error.message) + '</p>';
-      }
-      return;
+async function loadLeaveRequests() {
+  if (!state.userId) return;
+
+  const { data, error } = await client
+    .from("leave_requests")
+    .select("id,user_id,leave_type,start_date,end_date,calendar_days,workdays,reason,status,reviewed_by,reviewed_at,review_note,created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Could not load leave requests:", error);
+    if ($("myLeaveRequests")) {
+      $("myLeaveRequests").innerHTML =
+        '<p class="muted">Could not load leave requests: ' + esc(error.message) + '</p>';
     }
-    state.leaveRequests = data || [];
-    renderLeave();
+    renderLeaveBalances();
+    return;
   }
+
+  state.leaveRequests = data || [];
+  renderLeave();
+  renderLeaveBalances();
+}
 
 /* ---------------- Leave balance (robust) ---------------- */
 const LEAVE_ALLOWANCES = { sick: 15, vacation: 5 };
