@@ -1602,17 +1602,26 @@ function isWithinSelfActionWindow() { return Date.now() < suppressNotificationsU
     if (customSoundUrl) { URL.revokeObjectURL(customSoundUrl); customSoundUrl = null; }
   }
 
-  function playSettingSound() {
-    stopSettingSound();
-    const choice = $("settingSound").value;
-    const source = localStorage.getItem("eesi-sound-source") || "built-in";
-    const customFile = $("settingSoundFile").files?.[0];
-    if (source === "built-in" && choice === "off") return toast("Choose a built-in sound first.");
-    const duration = Number(source === "custom" ? $("settingCustomAlertDuration").value : $("settingAlertDuration").value);
-    const settings = notificationSettings();
-    if (duration === 0) return toast("Choose a duration first.");
-    if (source === "custom") {
-      if (!customFile) return toast("Select a custom ringtone file first.");
+  function playSettingSound(silent = false) {
+  stopSettingSound();
+  const choice = $("settingSound").value;
+  const source = localStorage.getItem("eesi-sound-source") || "built-in";
+  const customFile = $("settingSoundFile").files?.[0];
+  if (source === "built-in" && choice === "off") {
+    if (!silent) toast("Choose a built-in sound first.");
+    return;
+  }
+  const duration = Number(source === "custom" ? $("settingCustomAlertDuration").value : $("settingAlertDuration").value);
+  const settings = notificationSettings();
+  if (duration === 0) {
+    if (!silent) toast("Choose a duration first.");
+    return;
+  }
+  if (source === "custom") {
+    if (!customFile) {
+      if (!silent) toast("Select a custom ringtone file first.");
+      return;
+    }
       playCustomSettingSound();
       settingSoundTimeout = setTimeout(stopSettingSound, duration * 1000);
       if (settings.enabled && settings.vibration && "vibrate" in navigator) {
@@ -2059,7 +2068,7 @@ window.refreshLeaveBalances = function () {
     state.appNotifications = data || [];
     appNotificationsLoaded = true;
     renderAppNotifications();
-      if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
+        if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound(true);
   }
 }
 
@@ -2077,7 +2086,7 @@ async function loadApprovalNotifications() {
     state.approvalNotifications = data || [];
     approvalNotificationsLoaded = true;
     renderNotices();
- if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound();
+ if (newItems.length && notificationSettings().enabled && !isWithinSelfActionWindow()) { playSettingSound(true);
    }
  }
  function renderAppNotifications() { renderNotices(); }
@@ -2382,8 +2391,8 @@ async function handleIncomingMessage() {
   const activeNewUnmuted = !!state.activeThread && !isMuted(state.activeThread) && activeIncoming.length > 0;
 
   if ((unreadIncreased || activeNewUnmuted) && !isWithinSelfActionWindow()) {
-    playSettingSound();
-  }
+  playSettingSound(true);
+}
 
   renderChatList();
 }
@@ -4448,10 +4457,11 @@ function getActiveSignatureSrc() {
         if (error) throw error;
         $("reportStatus").textContent = "Report submitted.";
       }
-      $("reportTitle").value = ""; $("reportDetails").value = ""; $("reportPhotos").value = "";
-      $("submitReportButton").textContent = "Submit report";
-      await loadReports();
-      await loadAppNotifications();
+     $("reportTitle").value = ""; $("reportDetails").value = ""; $("reportPhotos").value = "";
+$("submitReportButton").textContent = "Submit report";
+await loadReports();
+suppressNotifications();   // reset window in case photo upload took longer than 5s
+await loadAppNotifications();
     } catch (error) {
       $("reportStatus").textContent = "Could not save report: " + (error.message || String(error));
     } finally {
