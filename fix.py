@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-EESI Ops — index.html auto-fix script.
-Reads "index (2).html", applies 8 fixes, writes "index.html".
-Usage:  python fix.py "index (2).html" index.html
+EESI Ops — index.html combined auto-fix script.
+Applies ALL fixes: duplicate cleanup, missing functions,
+PWA head, mobile CSS, mobile JS, service worker, and more.
+
+Usage:
+    python fix.py                          # fixes index.html in place
+    python fix.py input.html               # fixes input.html in place
+    python fix.py "index (2).html" out.html # reads input, writes out
 """
 
 import sys, os, re
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else "index (2).html"
-DST = sys.argv[2] if len(sys.argv) > 2 else "index.html"
+SRC = sys.argv[1] if len(sys.argv) > 1 else "index.html"
+DST = sys.argv[2] if len(sys.argv) > 2 else SRC
 
 if not os.path.exists(SRC):
     print(f"ERROR: Source file not found: {SRC}")
-    print(f'Usage: python fix.py "index (2).html" index.html')
+    print(f'Usage: python fix.py [input.html] [output.html]')
     sys.exit(1)
 
 try:
@@ -26,16 +31,84 @@ except UnicodeDecodeError:
 original_len = len(html)
 applied, skipped = [], []
 
-# ---------------- Fix 1: duplicate apple-touch-icon ----------------
+# ============================================================
+# FIX 1: Remove duplicate SVG apple-touch-icon
+# ============================================================
 fix1_re = re.compile(r'<link rel="apple-touch-icon" href="data:image/svg\+xml,[^"]*">\s*\n')
 new_html, n = fix1_re.subn("", html, count=1)
 if n == 1:
     html = new_html
     applied.append("Removed duplicate apple-touch-icon (SVG data-URI)")
 else:
-    skipped.append("Fix 1: apple-touch-icon SVG line not found (already removed?)")
+    skipped.append("Fix 1: apple-touch-icon SVG line not found")
 
-# ---------------- Fix 2: duplicate settings sound buttons ----------------
+# ============================================================
+# FIX A: Add PWA head block (manifest + apple meta tags + PNG icon)
+# ============================================================
+PWA_BLOCK = (
+    '<link rel="manifest" href="./manifest.webmanifest">\n'
+    '<link rel="apple-touch-icon" href="./icons/icon-192.png">\n'
+    '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n'
+    '<meta name="apple-mobile-web-app-title" content="EESI Ops">\n'
+)
+
+if 'rel="manifest"' in html:
+    skipped.append("Fix A: PWA manifest already present")
+else:
+    fav_pat = re.compile(r'(<link rel="icon" type="image/svg\+xml"[^>]*>)\s*\n')
+    new_html, n2 = fav_pat.subn(r'\1\n' + PWA_BLOCK, html, count=1)
+    if n2 > 0:
+        html = new_html
+        applied.append("Added PWA head block (manifest + apple meta + PNG icon)")
+    else:
+        # Fallback: insert PWA block right before </head>
+        if '</head>' in html:
+            html = html.replace('</head>', PWA_BLOCK + '</head>', 1)
+            applied.append("Added PWA head block (before </head>)")
+        else:
+            skipped.append("Fix A: no anchor point for PWA block")
+
+# ============================================================
+# FIX A2: Service worker registration
+# ============================================================
+SW_BLOCK = (
+    '<script>\n'
+    '  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {\n'
+    '    window.addEventListener("load", () => {\n'
+    '      navigator.serviceWorker.register("./sw.js").catch(err => {\n'
+    '        console.warn("Service worker registration failed:", err);\n'
+    '      });\n'
+    '    });\n'
+    '  }\n'
+    '</script>\n'
+)
+
+if 'serviceWorker.register' in html:
+    skipped.append("Fix A2: service worker already registered")
+elif '</body>' in html:
+    html = html.replace('</body>', SW_BLOCK + '</body>', 1)
+    applied.append("Added service worker registration")
+else:
+    skipped.append("Fix A2: no </body> found")
+
+# ============================================================
+# FIX B: Remove #activeChat CSS height override
+# ============================================================
+FIX_B_OLD = '''#activeChat {
+  height: calc(100dvh - 152px - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 152px - env(safe-area-inset-bottom));
+}
+'''
+if FIX_B_OLD in html:
+    html = html.replace(FIX_B_OLD, '', 1)
+    applied.append("Removed #activeChat CSS height override")
+else:
+    skipped.append("Fix B: #activeChat CSS block not found (already removed?)")
+
+# ============================================================
+# FIX 2: Remove duplicate settings sound buttons
+# ============================================================
 fix2_old = '''  <label><input id="settingVibration" type="checkbox"> Vibration</label>
   <div style="display:flex;gap:8px;margin:8px 0">
   <button id="builtInSoundChoice" class="btn" type="button">Built-in sounds</button>
@@ -48,9 +121,24 @@ if fix2_old in html:
     html = html.replace(fix2_old, fix2_new, 1)
     applied.append("Removed duplicate settings sound buttons")
 else:
-    skipped.append("Fix 2: duplicate settings buttons not found (already removed?)")
+    # Try more flexible pattern
+    flex_pat = re.compile(
+        r'(<label><input id="settingVibration" type="checkbox">\s*Vibration</label>\s*)\n'
+        r'<div style="display:flex;gap:8px;margin:8px 0">\s*\n'
+        r'\s*<button id="builtInSoundChoice"[^>]*>Built-in sounds</button>\s*\n'
+        r'\s*<button id="customSoundChoice"[^>]*>Custom ringtone</button>\s*\n'
+        r'</div>\s*\n'
+    )
+    new_html, n = flex_pat.subn(r'\1\n', html, count=1)
+    if n == 1:
+        html = new_html
+        applied.append("Removed duplicate settings sound buttons (flexible)")
+    else:
+        skipped.append("Fix 2: duplicate settings buttons not found")
 
-# ---------------- Fix 3: insert 9 missing functions + error handlers ----------------
+# ============================================================
+# FIX 3: Insert 9 missing functions + error handlers
+# ============================================================
 MISSING_FUNCTIONS = r'''  /* ============================================================
      MISSING FUNCTIONS — added to fix silent ReferenceErrors
      ============================================================ */
@@ -220,14 +308,16 @@ MISSING_FUNCTIONS = r'''  /* ===================================================
 
 anchor = "  function handleExtraAct(act, id, el) {"
 if "MISSING FUNCTIONS — added to fix silent ReferenceErrors" in html:
-    skipped.append("Fix 3: missing functions already present (skipping)")
+    skipped.append("Fix 3: missing functions already present")
 elif anchor in html:
     html = html.replace(anchor, MISSING_FUNCTIONS + anchor, 1)
     applied.append("Inserted 9 missing functions + 2 global error handlers")
 else:
     skipped.append("Fix 3: 'function handleExtraAct' anchor not found")
 
-# ---------------- Fix 4: avatar upload base64 removal ----------------
+# ============================================================
+# FIX 4: Avatar upload — no base64 fallback
+# ============================================================
 fix4_old = '''      if (!error) {
         const { data: pub } = client.storage.from("avatars").getPublicUrl(path);
         finalUrl = pub.publicUrl;
@@ -245,7 +335,9 @@ if fix4_old in html:
 else:
     skipped.append("Fix 4: avatar upload pattern not found")
 
-# ---------------- Fix 5: report photo size limit ----------------
+# ============================================================
+# FIX 5: Report photo size limit
+# ============================================================
 fix5_old = '''    for (const file of files) {
       if (!file.type.startsWith("image/")) {
         throw new Error("Please select image files only.");
@@ -270,7 +362,9 @@ elif fix5_old in html:
 else:
     skipped.append("Fix 5: report photo loop pattern not found")
 
-# ---------------- Fix 6: WebRTC sendTo race ----------------
+# ============================================================
+# FIX 6: WebRTC sendTo race condition
+# ============================================================
 fix6_old = '''  function sendTo(peerId, payload) {
     if (!peerChannels[peerId]) {
       peerChannels[peerId] = client.channel(callTopic(peerId), { config: { broadcast: { self: false } } });
@@ -305,7 +399,9 @@ elif fix6_old in html:
 else:
     skipped.append("Fix 6: sendTo function not found")
 
-# ---------------- Fix 7: state object cleanup ----------------
+# ============================================================
+# FIX 7: state object cleanup (remove duplicate keys)
+# ============================================================
 fix7_old = '''  const state = {
     userId: null, email: null, role: null, profile: null,
     profiles: [], roles: {}, presence: {},
@@ -334,7 +430,9 @@ if fix7_old in html:
 else:
     skipped.append("Fix 7: state object pattern not found")
 
-# ---------------- Fix 8: updateAccess duplicate line ----------------
+# ============================================================
+# FIX 8: updateAccess duplicate line
+# ============================================================
 fix8_old = '''    document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("hidden", !isManager()));
     document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
   }'''
@@ -346,20 +444,423 @@ if fix8_old in html:
 else:
     skipped.append("Fix 8: updateAccess duplicate pattern not found")
 
-# ---------------- Write + summary ----------------
+# ============================================================
+# FIX M1: Mobile CSS enhancements
+# ============================================================
+MOBILE_CSS = r'''/* ============================================================
+   MOBILE NATIVE ENHANCEMENTS
+   Makes the app feel like a real phone app
+   ============================================================ */
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (display-mode: standalone) {
+  header {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+  body {
+    padding-top: 0;
+  }
+}
+
+.page {
+  animation: pageFade 0.18s ease-out;
+}
+
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page.hidden {
+  animation: none;
+}
+
+button, .btn, .chip, .tab, .filter, .stat, .tile, .sheet-btn, .msgr-icon, .hbtn {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+.small-btn {
+  min-height: 32px;
+  min-width: auto;
+  padding: 6px 10px;
+}
+
+button:not(:disabled),
+.clickable,
+.person,
+.thread-row,
+.tile {
+  position: relative;
+  overflow: hidden;
+}
+
+button:not(:disabled)::after,
+.thread-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, currentColor 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+
+button:not(:disabled):active::after,
+.thread-row:active::after {
+  opacity: 0.08;
+  transform: scale(2.5);
+  transition: 0s;
+}
+
+.msgr-list,
+.msgr-msgs,
+.messages,
+#messages,
+#chatList,
+.sheet,
+.person-picker {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+nav.bottom {
+  height: calc(56px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+nav.bottom button {
+  min-height: 56px;
+  font-size: 11px;
+  transition: transform 0.15s, color 0.15s;
+}
+
+nav.bottom button:active {
+  transform: scale(0.92);
+}
+
+header {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.sheet-back {
+  animation: sheetBackdrop 0.2s ease-out;
+}
+
+.sheet {
+  animation: sheetSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sheetBackdrop {
+  from { background: transparent; }
+  to   { background: #0008; }
+}
+
+@keyframes sheetSlide {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.dialog .card {
+  animation: dialogPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.msgr-row {
+  animation: msgIn 0.22s ease-out;
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+header, nav, .msgr-head, .chat-head, .page > h1.title,
+.tile, .stat, .chip, .tab, .filter {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.msgr-bub, .item, .card p, textarea, input, .bubble {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+input, select, textarea {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
+#ptr-indicator {
+  position: fixed;
+  top: env(safe-area-inset-top);
+  left: 50%;
+  transform: translateX(-50%) translateY(-60px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  z-index: 100;
+  transition: transform 0.25s, opacity 0.25s;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+#ptr-indicator.active {
+  transform: translateX(-50%) translateY(20px);
+  opacity: 1;
+}
+
+#ptr-indicator.spinning {
+  animation: ptrSpin 0.8s linear infinite;
+}
+
+@keyframes ptrSpin {
+  to { transform: translateX(-50%) translateY(20px) rotate(360deg); }
+}
+
+.toast {
+  animation: toastIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+@keyframes toastIn {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.msgr-bub {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: transform 0.1s;
+}
+
+.msgr-bub:active {
+  transform: scale(0.98);
+}
+
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+button:disabled {
+  opacity: 0.4;
+  filter: grayscale(0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+'''
+
+if 'MOBILE NATIVE ENHANCEMENTS' in html:
+    skipped.append("Fix M1: mobile CSS already present")
+elif '</style>' in html:
+    html = html.replace('</style>', MOBILE_CSS + '</style>', 1)
+    applied.append("Added mobile CSS enhancements")
+else:
+    skipped.append("Fix M1: no </style> found")
+
+# ============================================================
+# FIX M2: Mobile gestures JS
+# ============================================================
+MOBILE_JS = r'''  /* ============================================================
+     MOBILE NATIVE GESTURES & FEEL
+     ============================================================ */
+
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  function haptic(ms = 10) {
+    if ("vibrate" in navigator && localStorage.getItem("eesi-vibration") === "on") {
+      try { navigator.vibrate(ms); } catch (e) {}
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button, .thread-row, .person, .tile, .stat");
+    if (t && !t.disabled) haptic(8);
+  }, { passive: true });
+
+  let ptrStartY = 0;
+  let ptrPulling = false;
+  let ptrIndicator = null;
+
+  function ensurePtrIndicator() {
+    if (!ptrIndicator) {
+      ptrIndicator = document.createElement("div");
+      ptrIndicator.id = "ptr-indicator";
+      ptrIndicator.innerHTML = "↓";
+      document.body.appendChild(ptrIndicator);
+    }
+    return ptrIndicator;
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    if (window.scrollY === 0) {
+      ptrStartY = e.touches[0].clientY;
+      ptrPulling = true;
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!ptrPulling || window.scrollY > 0) return;
+    const dy = e.touches[0].clientY - ptrStartY;
+    if (dy > 60) {
+      const ind = ensurePtrIndicator();
+      ind.classList.add("active");
+      ind.innerHTML = dy > 120 ? "↻" : "↓";
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchend", async (e) => {
+    if (!ptrPulling) return;
+    const dy = (e.changedTouches[0]?.clientY || 0) - ptrStartY;
+    ptrPulling = false;
+    if (dy > 120) {
+      const ind = ensurePtrIndicator();
+      ind.classList.add("active", "spinning");
+      haptic(20);
+      try {
+        if (typeof reloadEverything === "function") await reloadEverything();
+      } catch (err) {}
+      setTimeout(() => {
+        ind.classList.remove("active", "spinning");
+      }, 400);
+    } else if (ptrIndicator) {
+      ptrIndicator.classList.remove("active");
+    }
+  }, { passive: true });
+
+  let swStartX = 0;
+  let swStartY = 0;
+  let swTracking = false;
+
+  document.addEventListener("touchstart", (e) => {
+    swStartX = e.touches[0].clientX;
+    swStartY = e.touches[0].clientY;
+    swTracking = swStartX < 40;
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    if (!swTracking) return;
+    const dx = (e.changedTouches[0]?.clientX || 0) - swStartX;
+    const dy = Math.abs((e.changedTouches[0]?.clientY || 0) - swStartY);
+    if (dx > 80 && dy < 50) {
+      haptic(10);
+      if (typeof closeChat === "function" && !document.getElementById("activeChat").classList.contains("hidden")) {
+        closeChat();
+      } else if (typeof closeSheet === "function" && !document.getElementById("sheet").classList.contains("hidden")) {
+        closeSheet();
+      } else if (typeof closeCompose === "function" && !document.getElementById("chatCompose").classList.contains("hidden")) {
+        closeCompose();
+      } else if (typeof closeChatInfo === "function" && !document.getElementById("chatInfo").classList.contains("hidden")) {
+        closeChatInfo();
+      } else if (typeof goBack === "function") {
+        goBack();
+      }
+    }
+    swTracking = false;
+  }, { passive: true });
+
+  document.addEventListener("focusin", (e) => {
+    const t = e.target;
+    if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") {
+      setTimeout(() => {
+        t.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 250);
+    }
+  });
+
+  function setAppVh() {
+    document.documentElement.style.setProperty("--app-vh", window.innerHeight * 0.01 + "px");
+  }
+  setAppVh();
+  window.addEventListener("resize", setAppVh);
+  window.addEventListener("orientationchange", () => setTimeout(setAppVh, 100));
+
+'''
+
+if 'MOBILE NATIVE GESTURES' in html:
+    skipped.append("Fix M2: mobile gestures JS already present")
+elif '  applyDisplaySettings();\n  start();' in html:
+    html = html.replace(
+        '  applyDisplaySettings();\n  start();',
+        '  applyDisplaySettings();\n' + MOBILE_JS + '  start();',
+        1
+    )
+    applied.append("Added mobile gestures JS")
+else:
+    skipped.append("Fix M2: anchor (applyDisplaySettings + start) not found")
+
+# ============================================================
+# Write output + summary
+# ============================================================
 with open(DST, "w", encoding="utf-8") as f:
     f.write(html)
 
 print()
 print("=" * 62)
-print("  EESI Ops — auto-fix results")
+print("  EESI Ops — combined auto-fix results")
 print("=" * 62)
 for line in applied:
     print(f"  [OK]   {line}")
 for line in skipped:
-    print(f"  [!]    {line}")
+    print(f"  [--]   {line}")
 print()
 print(f"  Source: {SRC}  ({original_len:,} bytes)")
 print(f"  Output: {DST}  ({len(html):,} bytes)")
 print()
-print("  Done. Upload 'index.html' to GitHub.")
+print("  Upload the output to GitHub. Netlify will auto-deploy.")
