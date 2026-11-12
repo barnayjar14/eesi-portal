@@ -700,11 +700,6 @@ input, select, textarea {
   transform: scale(0.98);
 }
 
-#activeChat {
-  height: calc(100dvh - 152px - env(safe-area-inset-bottom));
-  max-height: calc(100dvh - 152px - env(safe-area-inset-bottom));
-}
-
 body.modal-open {
   overflow: hidden;
   position: fixed;
@@ -837,13 +832,13 @@ button:disabled {
     <span id="liveDot" class="live-dot" data-live="0" title="Live sync status"></span>
     <button class="hbtn" type="button" onclick="go('notices')" aria-label="Notifications">🔔 <span id="bell"></span></button>
     <button class="hbtn" type="button" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
-<button class="hbtn" type="button" onclick="toggleSettingsMenu()" aria-label="Settings">⋮</button>
+    <button class="hbtn" type="button" onclick="toggleSettingsMenu()" aria-label="Settings">⋮</button>
   </header>
   <div id="settingsMenu" class="card hidden" style="position:absolute;right:10px;top:58px;z-index:25;width:min(340px,calc(100vw - 20px))">
   <h2 style="margin-top:0">Settings</h2>
   <button id="closeSettingsButton" class="gray" type="button">Close</button>
   <h3>Notifications</h3>
-    <div style="display:flex;gap:8px;margin:8px 0">
+  <div style="display:flex;gap:8px;margin:8px 0">
   <button id="builtInSoundChoice" class="btn" type="button">
     Built-in sounds
   </button>
@@ -853,10 +848,6 @@ button:disabled {
     </div>
   <label><input id="settingNotifications" type="checkbox" checked> In-app notifications</label>
   <label><input id="settingVibration" type="checkbox"> Vibration</label>
-  <div style="display:flex;gap:8px;margin:8px 0">
-  <button id="builtInSoundChoice" class="btn" type="button">Built-in sounds</button>
-  <button id="customSoundChoice" class="gray" type="button">Custom ringtone</button>
-</div>
 
 <div id="builtInSoundPanel">
   <label for="settingSound">Sound</label>
@@ -1000,7 +991,7 @@ button:disabled {
         </div>
       </div>      
     </div></section>
-    
+        
     <section class="page hidden" id="page-members"><div class="ct">
       <h1 class="title">👥 Members</h1><div id="members"></div>
     </div></section>
@@ -1571,7 +1562,6 @@ $("closeDailyVerseButton").addEventListener("click", () => {
 
   const CURRENT_APP_VERSION = "1.0.0";
 
-  // Robust redirect URL helper for local, file:, or hosted domains (prevents "requested path is invalid")
   const APP_REDIRECT_URL = (function () {
     if (location.protocol === "file:") return location.href.split(/[?#]/)[0];
     return window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
@@ -1673,8 +1663,6 @@ $("settingVibration").addEventListener("change", saveNotificationSettings);
     threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [],
     sites: [], schedules: [], dtrs: [], notes: [], recs: [],
     reports: [], reportType: "service",
-    announcements: [], pending: [],
-    threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [],
     regionFilter: "all", setupIssue: "", booted: false
   };
   let editingReportId = null;
@@ -1686,20 +1674,16 @@ $("settingVibration").addEventListener("change", saveNotificationSettings);
   let dbReady = false;
   const timers = {};
 
-  /* ---------------- helpers ---------------- */
   function esc(value) {
     return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
   function isManager() { return state.role === "admin" || state.role === "representative"; }
-  // Returns the URL only if it is this project's Supabase storage (https) or a base64 image.
-  // Anything else (javascript:, other hosts, quotes that could break out of CSS) returns null.
   function safeUrl(u) {
     if (!u || typeof u !== "string") return null;
     if (/^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(u)) return u;
     if (u.startsWith(SUPABASE_URL + "/storage/v1/object/") && !/["'()\\\s<>]/.test(u)) return u;
     return null;
   }
-  // Intentionally empty until a version check is wanted (fixes the ReferenceError on startup).
   async function checkAppVersion() {}
   function isAdmin() { return state.role === "admin"; }
   function roleLabel(r) { return ROLE_LABELS[r] || r || "—"; }
@@ -1756,7 +1740,6 @@ $("settingVibration").addEventListener("change", saveNotificationSettings);
     }
   }
 
-  /* ---------------- auth ui ---------------- */
   function setAuthStatus(msg) { $("authStatus").textContent = msg; }
   function showAuth(message) {
     teardownLive();
@@ -1879,7 +1862,6 @@ const area = $("regArea").value;
     setAuthStatus("Password updated. Sign in with your new password.");
   });
 
-  /* ---------------- boot / session ---------------- */
   async function ensureProfile(session) {
     const { data, error } = await client.from("profiles")
       .select("user_id,full_name,email,id_no,address,team,phone,area,avatar_url,cover_url")
@@ -2035,7 +2017,6 @@ renderReportSites();
     else showAuth("Sign in to continue.");
   }
 
-  /* ---------------- access / navigation ---------------- */
   function updateAccess() {
     const canSeePmsChecklist = ["technician", "employee"].includes(state.role);
 document.querySelector('[data-report-type="checklist"]')
@@ -2043,9 +2024,8 @@ document.querySelector('[data-report-type="checklist"]')
     document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
     
     document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("hidden", !isManager()));
-    document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
   }
-
+  
   let page = "home";
   const historyStack = [];
 
@@ -2375,7 +2355,7 @@ $("settingCompact").addEventListener("change", () => {
   applyDisplaySettings();
 });
 window.resetDisplaySettings = resetDisplaySettings;
-  /* ---------------- loaders ---------------- */
+
   async function loadProfiles() {
     const { data, error } = await client.from("profiles")
       .select("user_id,full_name,email,id_no,address,team,phone,area,avatar_url,cover_url")
@@ -2839,7 +2819,6 @@ function renderReports() {
     renderNotes();
   }
 
-  // Schema-guarded query (avoids missing column errors completely)
   async function loadRecs() {
     const { data, error } = await client.from("recommendations")
       .select("id,user_id,condition,part,reason,site,location:specific_location,created_at,recommendation_comments(id,user_id,comment,created_at)")
@@ -2964,8 +2943,7 @@ function renderReports() {
     }
     window.location.reload(true);
   };
-
-  /* ---------------- live sync ---------------- */
+  
   const RELOADERS = {
     profiles: () => loadProfiles(),
     user_roles: () => refreshOwnRole(),
@@ -3137,7 +3115,6 @@ app_notifications: () => loadAppNotifications()
     if (state.activeThread) await loadMessages(state.activeThread);
   }
 
-  /* ---------------- renderers ---------------- */
   function renderAll() {
     renderHome();
     renderMembers();
@@ -3326,7 +3303,6 @@ function updateAnnouncementTicker() {
     )).join("") || '<p class="muted">No announcements yet.</p>';
   }
 
-  /* ---------------- Schedule with categorized assignees ---------------- */
   function renderAssigneesPicker() {
     const box = $("assigneesPicker");
     if (!box) return;
@@ -3535,7 +3511,6 @@ function employeeDisplayName() {
     )).join("") || '<p class="muted">No notes yet.</p>';
   }
 
-  /* ---------------- Recommendations ---------------- */
   function renderRecs() {
     const visible = isManager() ? state.recs : state.recs.filter(r => r.user_id === state.userId);
     $("recList").innerHTML = visible.map(r => {
@@ -3567,7 +3542,6 @@ function employeeDisplayName() {
     }).join("") || '<p class="muted">No recommendations yet.</p>';
   }
 
-  /* ---------------- Notifications ---------------- */
   function renderNotices() {
     if (!state.userId) return;
     const items = [];
@@ -3676,8 +3650,7 @@ $("noticeList").innerHTML =
     $("coverPreview").querySelector("span").classList.toggle("hidden", !!coverSrc);
     renderLeaveBalances();
   }
-
-  /* ---------------- chat rendering ---------------- */
+  
   function threadMembers(t) { return t.thread_members || []; }
 
   function threadTitle(t) {
@@ -3825,9 +3798,6 @@ $("noticeList").innerHTML =
     $("sendBtn").textContent = $("messageText").value.trim() ? "➤" : "👍";
   }
 
-  function callToast() { toast("Calls aren't available in this version yet."); }
-  window.callToast = callToast;
-
   function openChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
     if (!t) return;
@@ -3836,7 +3806,6 @@ $("noticeList").innerHTML =
     renderChatInfo();
   }
   window.openChatInfo = openChatInfo;
-
 
   function closeChatInfo() {
     $("chatInfo").classList.add("hidden");
@@ -4145,7 +4114,7 @@ $("messages").addEventListener("pointerdown", event => {
     messageHoldTarget = null;
   });
 });
-  /* ---------------- actions ---------------- */
+
   async function postAnnouncement() {
     if (!isManager()) return toast("Managers only");
     const title = $("annTitle").value.trim();
@@ -4452,7 +4421,6 @@ await loadApprovalNotifications();
     toast("Area updated");
   }
 
-  /* ---------------- Profile & Photo Uploads ---------------- */
   async function saveProfile() {
     const name = $("pName").value.trim();
     if (!name) return toast("Full name is required");
@@ -4519,12 +4487,11 @@ await loadApprovalNotifications();
         upsert: true, cacheControl: "3600", contentType: file.type
       });
 
-      if (!error) {
-        const { data: pub } = client.storage.from("avatars").getPublicUrl(path);
-        finalUrl = pub.publicUrl;
-      } else {
-        finalUrl = await compressImage(file, column === "cover_url" ? 1100 : 400);
+      if (error) {
+        return toast("Could not upload picture: " + error.message);
       }
+      const { data: pub } = client.storage.from("avatars").getPublicUrl(path);
+      finalUrl = pub.publicUrl;
 
       const { error: dbError } = await client.from("profiles")
         .update({ [column]: finalUrl }).eq("user_id", state.userId);
@@ -4556,7 +4523,6 @@ await loadApprovalNotifications();
   $("profileFile").addEventListener("change", e => { uploadPhoto(e.target.files[0], "avatar_url"); e.target.value = ""; });
   $("coverFile").addEventListener("change", e => { uploadPhoto(e.target.files[0], "cover_url"); e.target.value = ""; });
 
-  /* ---------------- signature + export ---------------- */
   const sig = $("signature");
   const ctx = sig.getContext("2d");
   let drawing = false;
@@ -4689,7 +4655,6 @@ window.clearSignaturePhoto = clearSignaturePhoto;
   window.printDtr = printDtr;
   window.downloadDtr = downloadDtr;
 
-  /* ---------------- per-chat preferences (this device only) ---------------- */
   const PLANNED_FEATURES = {
     disappearing: ["Disappearing messages", "Not turned on yet. Messages here stay until someone deletes them. Expiring messages need a time limit saved on each message in the database."],
     receipts: ["Read receipts", "Not turned on yet. Showing who has read a message needs read times displayed inside the chat, which this version does not do."],
@@ -4726,7 +4691,6 @@ window.clearSignaturePhoto = clearSignaturePhoto;
   }
   function refreshChatViews() { renderChatInfo(); renderChatList(); renderNotices(); }
 
-  /* ---------------- sheets: person popup, profile, confirmations ---------------- */
   function openSheet(html) {
     $("sheetBody").innerHTML = html;
     $("sheet").classList.remove("hidden");
@@ -4952,7 +4916,7 @@ async function permanentlyDeleteUser(userId) {
   renderAdmin();
   toast("Supabase Auth user permanently deleted.");
 }
-  /* ---------------- chat info panels (direct and group) ---------------- */
+
   function infoHead(name, sub, avatarHtml) {
     return '<div class="info-head">' + avatarHtml + '<h2>' + esc(name) + '</h2><p class="muted">' + esc(sub) + '</p></div>';
   }
@@ -5064,7 +5028,6 @@ async function permanentlyDeleteUser(userId) {
   );
   }   
 
-  /* ---------------- auto-save photos ---------------- */
   const autoSaved = new Set();
   function toggleAutosave(id) {
     const on = !getPref(id).autosave;
@@ -5106,7 +5069,6 @@ async function permanentlyDeleteUser(userId) {
     saveImage(url, m.attachment_name || "photo.jpg");
   }
 
-  /* ---------------- 1:1 calls (WebRTC; signaling over Supabase Realtime) ---------------- */
   const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
   const RING_MS = 30000;
   let callChannel = null;
@@ -5130,11 +5092,17 @@ async function permanentlyDeleteUser(userId) {
   function sendTo(peerId, payload) {
     if (!peerChannels[peerId]) {
       peerChannels[peerId] = client.channel(callTopic(peerId), { config: { broadcast: { self: false } } });
-      peerChannels[peerId].subscribe();
     }
-    return peerChannels[peerId].send({
+    const ch = peerChannels[peerId];
+    const doSend = () => ch.send({
       type: "broadcast", event: "call",
       payload: { ...payload, from: state.userId, to: peerId }
+    });
+    if (ch.state === "joined") return doSend();
+    return new Promise(resolve => {
+      ch.subscribe(status => {
+        if (status === "SUBSCRIBED" && ch.state === "joined") resolve(doSend());
+      });
     });
   }
   function plain(desc) { return { type: desc.type, sdp: desc.sdp }; }
@@ -5325,7 +5293,6 @@ async function permanentlyDeleteUser(userId) {
     $("callCamBtn").textContent = enable ? "Camera off" : "Camera on";
   }
 
-  /* ---------------- button routing for the new screens ---------------- */
   function handleExtraAct(act, id, el) {
     switch (act) {
       case "center-live-location": centerLiveLocation(id); return true;
@@ -5365,8 +5332,6 @@ async function permanentlyDeleteUser(userId) {
       default: return false;
     }
   }
-
-  /* ---------------- delegated clicks/changes ---------------- */
   
   $("openAddSite").addEventListener("click", () => {
   $("addSiteOverlay").classList.remove("hidden");
@@ -5503,9 +5468,13 @@ $("submitReportButton").addEventListener("click", async () => {
         )
       : null;
 
+    const MAX_PHOTO_MB = 5;
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
         throw new Error("Please select image files only.");
+      }
+      if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
+        throw new Error("Photo too large — max " + MAX_PHOTO_MB + " MB each.");
       }
 
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -5762,7 +5731,7 @@ $("closePmsChecklist").addEventListener("click", () => {
   state.reportType = "service";
   renderReports();
 });
-   /* ---------------- PMS checklist, display and data entry only ---------------- */
+
 let selectedPmsRegion = "Luzon";
 let selectedPmsSiteId = "";
 let selectedPmsUnit = "elevator";
@@ -5802,11 +5771,7 @@ const CENTRAL_BLOC_ESCALATORS = {
       { id: "Esc. No. 19", floor: "B2-B3" },
       { id: "Esc. No. 21", floor: "B1-B2" },
       { id: "Esc. No. 3", floor: "G-B1" },
-      {
-        id: "Esc. No. 26",
-        floor: "2-G",
-        note: "2 Lgt. Newel Guide Roller (Leftside), 2 Lgt. Newel Guide Roller (Rightside)"
-      },
+      { id: "Esc. No. 26", floor: "2-G", note: "2 Lgt. Newel Guide Roller (Leftside), 2 Lgt. Newel Guide Roller (Rightside)" },
       { id: "Esc. No. 27", floor: "3-2" },
       { id: "Esc. No. 17", floor: "4-3" }
     ],
@@ -5815,22 +5780,14 @@ const CENTRAL_BLOC_ESCALATORS = {
       { id: "Esc. No. 22", floor: "B2-B1" },
       { id: "Esc. No. 4", floor: "B1-G" },
       { id: "Esc. No. 25", floor: "G-2" },
-      {
-        id: "Esc. No. 28",
-        floor: "2-3",
-        note: "2 Lgt. Newel Guide Roller (Rightside)"
-      },
+      { id: "Esc. No. 28", floor: "2-3", note: "2 Lgt. Newel Guide Roller (Rightside)" },
       { id: "Esc. No. 18", floor: "3-4" }
     ]
   },
   "IVILLA SIDE": {
     DOWN: [
       { id: "Esc. No. 2", floor: "B1-B2" },
-      {
-        id: "Esc. No. 23",
-        floor: "G-B1",
-        note: "1 lot. Rubber Handrail (Leftside), 2pcs. Newel Guide Roller (Leftside), 1 Lot. Flywheel (Leftside)"
-      },
+      { id: "Esc. No. 23", floor: "G-B1", note: "1 lot. Rubber Handrail (Leftside), 2pcs. Newel Guide Roller (Leftside), 1 Lot. Flywheel (Leftside)" },
       { id: "Esc. No. 6", floor: "2-G" },
       { id: "Esc. No. 7", floor: "3-2" },
       { id: "Esc. No. 9", floor: "4-3" },
@@ -5842,11 +5799,7 @@ const CENTRAL_BLOC_ESCALATORS = {
       { id: "Esc. No. 5", floor: "G-2" },
       { id: "Esc. No. 8", floor: "2-3" },
       { id: "Esc. No. 10", floor: "3-4" },
-      {
-        id: "Esc. No. 11",
-        floor: "4-5",
-        note: "2 Lgt. Newel Guide Roller"
-      }
+      { id: "Esc. No. 11", floor: "4-5", note: "2 Lgt. Newel Guide Roller" }
     ]
   },
   "PADRIGA SIDE": {
@@ -5856,11 +5809,7 @@ const CENTRAL_BLOC_ESCALATORS = {
       { id: "Esc. No. 16", floor: "4-3" }
     ],
     UP: [
-      {
-        id: "Esc. No. 13",
-        floor: "G-2",
-        note: "2 Lgt. Newel Guide Roller"
-      },
+      { id: "Esc. No. 13", floor: "G-2", note: "2 Lgt. Newel Guide Roller" },
       { id: "Esc. No. 29", floor: "2-3" },
       { id: "Esc. No. 15", floor: "3-4" }
     ]
@@ -5907,29 +5856,14 @@ function pmsOptionList(id, label, options, selectedValue) {
 }
 
 function renderAyalaEscalator() {
-  let html = pmsOptionList(
-    "pmsGroup",
-    "Escalator group",
-    Object.keys(AYALA_ESCALATORS),
-    selectedPmsGroup
-  );
+  let html = pmsOptionList("pmsGroup", "Escalator group", Object.keys(AYALA_ESCALATORS), selectedPmsGroup);
 
   if (selectedPmsGroup) {
-    html += pmsOptionList(
-      "pmsDirection",
-      "Direction",
-      ["Up", "Down"],
-      selectedPmsDirection
-    );
+    html += pmsOptionList("pmsDirection", "Direction", ["Up", "Down"], selectedPmsDirection);
   }
 
   if (selectedPmsGroup && selectedPmsDirection) {
-    html += pmsOptionList(
-      "pmsEquipment",
-      "Unit",
-      AYALA_ESCALATORS[selectedPmsGroup][selectedPmsDirection],
-      selectedPmsEquipment
-    );
+    html += pmsOptionList("pmsEquipment", "Unit", AYALA_ESCALATORS[selectedPmsGroup][selectedPmsDirection], selectedPmsEquipment);
   }
 
   if (selectedPmsGroup && selectedPmsDirection && selectedPmsEquipment) {
@@ -5963,24 +5897,13 @@ function renderAyalaEscalator() {
   return html;
 }
 function renderCentralBlocEscalator() {
-  let html = pmsOptionList(
-    "pmsGroup",
-    "Side",
-    Object.keys(CENTRAL_BLOC_ESCALATORS),
-    selectedPmsGroup
-  );
+  let html = pmsOptionList("pmsGroup", "Side", Object.keys(CENTRAL_BLOC_ESCALATORS), selectedPmsGroup);
 
   if (selectedPmsGroup) {
-    html += pmsOptionList(
-      "pmsDirection",
-      "Direction",
-      ["DOWN", "UP"],
-      selectedPmsDirection
-    );
+    html += pmsOptionList("pmsDirection", "Direction", ["DOWN", "UP"], selectedPmsDirection);
   }
 
-  const units =
-    selectedPmsGroup && selectedPmsDirection
+  const units = selectedPmsGroup && selectedPmsDirection
       ? CENTRAL_BLOC_ESCALATORS[selectedPmsGroup][selectedPmsDirection]
       : [];
 
@@ -5990,7 +5913,6 @@ function renderCentralBlocEscalator() {
       '</p>';
 
     units.forEach((unit, index) => {
-      const key = selectedPmsGroup + "-" + selectedPmsDirection + "-" + index;
       const selected = selectedPmsEquipment === unit.id;
 
       html += '<div class="item">' +
@@ -6001,9 +5923,7 @@ function renderCentralBlocEscalator() {
         '<b>' + esc(unit.id) +
         (unit.floor ? " · " + esc(unit.floor) : "") +
         '</b></label>' +
-        (unit.note
-          ? '<p class="muted">Listed parts / note: ' + esc(unit.note) + '</p>'
-          : '') +
+        (unit.note ? '<p class="muted">Listed parts / note: ' + esc(unit.note) + '</p>' : '') +
         (selected
           ? '<div class="field"><label for="central-status">Status</label>' +
             '<select id="central-status">' +
@@ -6023,59 +5943,36 @@ function renderCentralBlocEscalator() {
   return html;
   }
   function renderCentralBlocElevator() {
-  let html = pmsOptionList(
-    "pmsGroup",
-    "Area",
-    Object.keys(CENTRAL_BLOC_ELEVATORS),
-    selectedPmsGroup
-  );
-
+  let html = pmsOptionList("pmsGroup", "Area", Object.keys(CENTRAL_BLOC_ELEVATORS), selectedPmsGroup);
   const units = CENTRAL_BLOC_ELEVATORS[selectedPmsGroup] || [];
 
   if (units.length) {
-    html += pmsOptionList(
-      "pmsEquipment",
-      "Elevator",
-      units,
-      selectedPmsEquipment
-    );
+    html += pmsOptionList("pmsEquipment", "Elevator", units, selectedPmsEquipment);
   }
 
   if (selectedPmsEquipment) {
-    html += '<p class="muted">' +
-      esc(selectedPmsEquipment) +
-      ' selected. Add an approved elevator checklist before using this for maintenance.' +
-      '</p>';
+    html += '<p class="muted">' + esc(selectedPmsEquipment) +
+      ' selected. Add an approved elevator checklist before using this for maintenance.</p>';
   }
 
   return html;
   }
 function renderAyalaElevator() {
-  return pmsOptionList(
-    "pmsEquipment",
-    "Elevator category",
-    ["Freight Elevator", "Dumbwaiter"],
-    selectedPmsEquipment
-  ) +
+  return pmsOptionList("pmsEquipment", "Elevator category", ["Freight Elevator", "Dumbwaiter"], selectedPmsEquipment) +
   (selectedPmsEquipment
-    ? '<div class="card"><p class="muted">' +
-      esc(selectedPmsEquipment) +
-      ' selected. Add an approved equipment-specific checklist before using this for maintenance.' +
-      '</p></div>'
+    ? '<div class="card"><p class="muted">' + esc(selectedPmsEquipment) +
+      ' selected. Add an approved equipment-specific checklist before using this for maintenance.</p></div>'
     : "");
 }
 function renderGenericPms() {
   const site = pmsSelectedSite();
   return '<div class="card"><p class="muted">' +
-    'No PMS unit list is configured for ' +
-    esc(site?.name || "this site") +
-    '. Add approved elevator or escalator units before recording a checklist.' +
-    '</p></div>';
+    'No PMS unit list is configured for ' + esc(site?.name || "this site") +
+    '. Add approved elevator or escalator units before recording a checklist.</p></div>';
 }
 function renderPmsSiteOptions() {
   const sites = (state.sites || []).filter(site =>
-    String(site.region || "").trim().toLowerCase() ===
-    selectedPmsRegion.toLowerCase()
+    String(site.region || "").trim().toLowerCase() === selectedPmsRegion.toLowerCase()
   );
 
   $("pmsSitePickerTitle").textContent = "Choose a site in " + selectedPmsRegion;
@@ -6088,17 +5985,13 @@ function renderPmsSiteOptions() {
         '</b><span class="muted">' + esc(site.city || "") +
         '</span></span><span aria-hidden="true">›</span></button>'
       ).join("")
-    : '<p class="muted">No sites are listed for ' +
-      esc(selectedPmsRegion) + '.</p>';
+    : '<p class="muted">No sites are listed for ' + esc(selectedPmsRegion) + '.</p>';
 }
 function renderPmsChecklist() {
   const canUsePmsChecklist = ["technician", "employee"].includes(state.role);
   const selected = pmsSelectedSite();
 
-  $("pmsChecklistPanel").classList.toggle(
-    "hidden",
-    !canUsePmsChecklist || $("pmsReportContent").classList.contains("hidden")
-  );
+  $("pmsChecklistPanel").classList.toggle("hidden", !canUsePmsChecklist || $("pmsReportContent").classList.contains("hidden"));
 
   document.querySelectorAll("[data-pms-unit]").forEach(button => {
     button.classList.toggle("active", button.dataset.pmsUnit === selectedPmsUnit);
@@ -6111,9 +6004,7 @@ function renderPmsChecklist() {
     return;
   }
 
-  $("pmsSelectedSite").textContent =
-    (selected.name || "Selected site") +
-    " · " +
+  $("pmsSelectedSite").textContent = (selected.name || "Selected site") + " · " +
     (selectedPmsUnit === "elevator" ? "Elevator Unit" : "Escalator Unit");
 
   $("pmsSitePicker").classList.add("hidden");
@@ -6157,20 +6048,11 @@ document.querySelectorAll("[data-pms-unit]").forEach(button => {
   const site = pmsSelectedSite();
   const status = $("pmsRecordStatus");
 
-  if (!state.userId) {
-    status.textContent = "Sign in before saving a checklist.";
-    return;
-  }
-  if (!site) {
-    status.textContent = "Select a site first.";
-    return;
-  }
+  if (!state.userId) { status.textContent = "Sign in before saving a checklist."; return; }
+  if (!site) { status.textContent = "Select a site first."; return; }
 
   const checklistDate = $("pmsChecklistDate").value;
-  if (!checklistDate) {
-    status.textContent = "Choose a checklist date.";
-    return;
-  }
+  if (!checklistDate) { status.textContent = "Choose a checklist date."; return; }
 
   const checklistData = {};
   $("pmsCategories").querySelectorAll("select, input, textarea").forEach(field => {
@@ -6195,11 +6077,7 @@ document.querySelectorAll("[data-pms-unit]").forEach(button => {
     checklist_data: checklistData
   });
 
-  if (error) {
-    status.textContent = "Could not save checklist: " + error.message;
-    return;
-  }
-
+  if (error) { status.textContent = "Could not save checklist: " + error.message; return; }
   status.textContent = "Checklist record saved.";
   toast("PMS checklist saved.");
 });
@@ -6243,15 +6121,9 @@ function updateLiveClock() {
 
   const now = new Date();
   clock.textContent = new Intl.DateTimeFormat("en-PH", {
-    timeZone: "Asia/Manila",
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
+    timeZone: "Asia/Manila", weekday: "long", year: "numeric",
+    month: "long", day: "numeric", hour: "numeric",
+    minute: "2-digit", second: "2-digit", hour12: true
   }).format(now);
 }
 
@@ -6260,45 +6132,24 @@ setInterval(updateLiveClock, 1000);
 let employeeLocationWatchId = null;
 
 async function startEmployeeLocationSharing() {
-  if (!state.userId) {
-    $("locationStatus").textContent = "Sign in before sharing your location.";
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    $("locationStatus").textContent = "Location is not available in this browser.";
-    return;
-  }
+  if (!state.userId) { $("locationStatus").textContent = "Sign in before sharing your location."; return; }
+  if (!navigator.geolocation) { $("locationStatus").textContent = "Location is not available in this browser."; return; }
 
   $("locationStatus").textContent = "Requesting location permission…";
 
   employeeLocationWatchId = navigator.geolocation.watchPosition(
     async position => {
       const { latitude, longitude } = position.coords;
-
-      const { error } = await client.rpc("set_my_employee_location", {
-  p_latitude: latitude,
-  p_longitude: longitude
-});
-
-      if (error) {
-        $("locationStatus").textContent = "Could not share location: " + error.message;
-        return;
-      }
-
-      $("locationStatus").textContent =
-        "Location sharing is on. Last updated " +
-        new Date().toLocaleTimeString();
-
+      const { error } = await client.rpc("set_my_employee_location", { p_latitude: latitude, p_longitude: longitude });
+      if (error) { $("locationStatus").textContent = "Could not share location: " + error.message; return; }
+      $("locationStatus").textContent = "Location sharing is on. Last updated " + new Date().toLocaleTimeString();
       $("startLocationButton").classList.add("hidden");
       $("stopLocationButton").classList.remove("hidden");
     },
     error => {
-      $("locationStatus").textContent =
-        error.code === 1
+      $("locationStatus").textContent = error.code === 1
           ? "Location permission was denied."
           : "Could not get your location. Check device location settings.";
-
       if (employeeLocationWatchId !== null) {
         navigator.geolocation.clearWatch(employeeLocationWatchId);
         employeeLocationWatchId = null;
@@ -6313,27 +6164,20 @@ async function stopEmployeeLocationSharing() {
     navigator.geolocation.clearWatch(employeeLocationWatchId);
     employeeLocationWatchId = null;
   }
-
   if (state.userId) {
     const { error } = await client.rpc("stop_my_employee_location_sharing");
     if (error) {
-      $("locationStatus").textContent =
-        "Stopped updates, but could not update sharing status: " + error.message;
+      $("locationStatus").textContent = "Stopped updates, but could not update sharing status: " + error.message;
     } else {
       $("locationStatus").textContent = "Location sharing is off.";
     }
   }
-
   $("startLocationButton").classList.remove("hidden");
   $("stopLocationButton").classList.add("hidden");
 }
 
-$("startLocationButton").addEventListener(
-  "click", startEmployeeLocationSharing
-);
-$("stopLocationButton").addEventListener(
-  "click", stopEmployeeLocationSharing
-);
+$("startLocationButton").addEventListener("click", startEmployeeLocationSharing);
+$("stopLocationButton").addEventListener("click", stopEmployeeLocationSharing);
 let liveMapInstance = null;
 let liveMapMarkers = [];
   const liveLocationMarkers = new Map();
@@ -6341,57 +6185,32 @@ let liveMapMarkers = [];
 window.initLiveMap = function () {
   const element = $("liveMap");
   if (!element || !window.google?.maps) return;
-
   liveMapInstance = new google.maps.Map(element, {
-    center: { lat: 12.8797, lng: 121.7740 },
-    zoom: 6,
-    mapTypeControl: true
+    center: { lat: 12.8797, lng: 121.7740 }, zoom: 6, mapTypeControl: true
   });
 };
 function centerLiveLocation(userId) {
   const marker = liveLocationMarkers.get(String(userId));
-
-  if (!marker || !liveMapInstance) {
-    return toast("That employee has no recent shared location.");
-  }
-
+  if (!marker || !liveMapInstance) return toast("That employee has no recent shared location.");
   liveMapInstance.panTo(marker.getPosition());
   liveMapInstance.setZoom(16);
   google.maps.event.trigger(marker, "click");
 }
 async function loadLiveMap() {
   if (!isAdmin()) return toast("Administrator only");
-
   const listBox = $("liveLocationList");
   const statusBox = $("liveLocationStatus");
   if (!listBox || !statusBox) return;
-
-  if (!window.google?.maps) {
-    statusBox.textContent = "Google Maps is still loading. Try again shortly.";
-    return;
-  }
-
+  if (!window.google?.maps) { statusBox.textContent = "Google Maps is still loading. Try again shortly."; return; }
   if (!liveMapInstance) window.initLiveMap();
-
-  if (!liveMapInstance) {
-    statusBox.textContent = "Map could not be initialized. Check the Google Maps setup.";
-    return;
-  }
+  if (!liveMapInstance) { statusBox.textContent = "Map could not be initialized."; return; }
 
   await loadRoles();
-
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-  const { data, error } = await client
-    .from("employee_locations")
+  const { data, error } = await client.from("employee_locations")
     .select("user_id,latitude,longitude,updated_at")
-    .eq("sharing", true)
-    .gte("updated_at", cutoff);
-
-  if (error) {
-    statusBox.textContent = "Could not load locations: " + error.message;
-    return;
-  }
+    .eq("sharing", true).gte("updated_at", cutoff);
+  if (error) { statusBox.textContent = "Could not load locations: " + error.message; return; }
 
   liveLocationMarkers.forEach(marker => marker.setMap(null));
   liveLocationMarkers.clear();
@@ -6399,9 +6218,7 @@ async function loadLiveMap() {
 
   const online = onlineIds();
   const recentLocations = data || [];
-  const onlineLocations = recentLocations.filter(location =>
-    online.has(location.user_id)
-  );
+  const onlineLocations = recentLocations.filter(location => online.has(location.user_id));
 
   statusBox.textContent = onlineLocations.length
     ? onlineLocations.length + " online employee(s) with a recent shared location."
@@ -6412,7 +6229,6 @@ async function loadLiveMap() {
   onlineLocations.forEach(location => {
     const lat = Number(location.latitude);
     const lng = Number(location.longitude);
-
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     const profile = profileOf(location.user_id);
@@ -6421,28 +6237,20 @@ async function loadLiveMap() {
     const position = { lat, lng };
 
     const marker = new google.maps.Marker({
-      map: liveMapInstance,
-      position,
-      title: name + " · " + roleLabel(role)
+      map: liveMapInstance, position, title: name + " · " + roleLabel(role)
     });
 
     const content = document.createElement("div");
     const nameLine = document.createElement("strong");
     nameLine.textContent = name;
-
     const roleLine = document.createElement("div");
     roleLine.textContent = roleLabel(role);
-
     const updatedLine = document.createElement("div");
     updatedLine.textContent = "Updated: " + fmtDate(location.updated_at);
-
     content.append(nameLine, roleLine, updatedLine);
 
     const infoWindow = new google.maps.InfoWindow({ content });
-
-    marker.addListener("click", () => {
-      infoWindow.open({ anchor: marker, map: liveMapInstance });
-    });
+    marker.addListener("click", () => { infoWindow.open({ anchor: marker, map: liveMapInstance }); });
 
     liveLocationMarkers.set(String(location.user_id), marker);
     liveMapMarkers.push(marker);
@@ -6450,21 +6258,14 @@ async function loadLiveMap() {
   });
 
   const rows = onlineLocations
-    .filter(location =>
-      Number.isFinite(Number(location.latitude)) &&
-      Number.isFinite(Number(location.longitude))
-    )
-    .sort((a, b) =>
-      profileName(a.user_id).localeCompare(profileName(b.user_id))
-    );
+    .filter(location => Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude)))
+    .sort((a, b) => profileName(a.user_id).localeCompare(profileName(b.user_id)));
 
   listBox.innerHTML = rows.map(location => {
     const profile = profileOf(location.user_id);
     const role = state.roles[location.user_id]?.app_role || "employee";
-
     return '<button type="button" class="person" data-act="center-live-location" data-id="' +
-      esc(location.user_id) + '">' +
-      '<span class="person-info"><b>' + esc(profile?.full_name || "Member") +
+      esc(location.user_id) + '"><span class="person-info"><b>' + esc(profile?.full_name || "Member") +
       '</b><span class="muted">Online · ' + esc(roleLabel(role)) +
       ' · Updated ' + esc(fmtDate(location.updated_at)) +
       '</span></span><span aria-hidden="true">›</span></button>';
@@ -6477,8 +6278,125 @@ async function loadLiveMap() {
     liveMapInstance.fitBounds(bounds);
   }
 }
-  
-  /* ---------------- init ---------------- */
+
+  async function changePassword() {
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return toast("Sign in first.");
+    const newPassword = prompt("Enter your new password (min 8 characters):");
+    if (!newPassword || newPassword.length < 8) return toast("Password must be at least 8 characters.");
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) return toast("Could not update password: " + error.message);
+    toast("Password updated successfully.");
+  }
+  window.changePassword = changePassword;
+
+  function openNotifySheet(threadId) {
+    const pref = getPref(threadId);
+    const current = pref.mute || "off";
+    openSheet(
+      '<h2>Notifications &amp; sounds</h2><p class="muted">Choose what happens when new messages arrive in this chat.</p>' +
+      [["off","🔔 On (default)"],["3600000","🔕 Mute for 1 hour"],["28800000","🔕 Mute for 8 hours"],["forever","🔕 Mute forever"]]
+        .map(([value, label]) =>
+          '<button class="sheet-btn' + (current === value ? ' primary' : '') + '" type="button" data-act="chat-set-mute" data-id="' + esc(threadId) + '" data-value="' + value + '">' + esc(label) + '</button>'
+        ).join("") + sheetClose()
+    );
+  }
+  window.openNotifySheet = openNotifySheet;
+
+  function setMuteChoice(threadId, choice) {
+    const muteValue = choice === "off" ? null : (choice === "forever" ? "forever" : Date.now() + Number(choice));
+    setPref(threadId, { mute: muteValue });
+    refreshChatViews();
+    closeSheet();
+    toast(choice === "off" ? "Notifications turned on." : "Chat muted.");
+  }
+  window.setMuteChoice = setMuteChoice;
+
+  async function openGroupWith(otherUserId) {
+    closeSheet();
+    const other = profileOf(otherUserId);
+    const name = prompt("Group name:", "Group with " + (other?.full_name?.split(" ")[0] || "member"));
+    if (!name) return;
+    $("groupName").value = name;
+    openCompose();
+    showGroupForm();
+    const checkbox = [...$("groupChoices").querySelectorAll("input")].find(cb => cb.value === otherUserId);
+    if (checkbox) checkbox.checked = true;
+  }
+  window.openGroupWith = openGroupWith;
+
+  function shareContact(userId) {
+    const p = profileOf(userId);
+    if (!p) return toast("Profile not found.");
+    const vcard = ["BEGIN:VCARD","VERSION:3.0","FN:" + (p.full_name || ""),"TEL:" + (p.phone || ""),"EMAIL:" + (p.email || ""),"ORG:EESI Elevators","END:VCARD"].join("\n");
+    const blob = new Blob([vcard], { type: "text/vcard" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (p.full_name || "contact").replace(/\s+/g, "_") + ".vcf";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    toast("Contact card shared.");
+  }
+  window.shareContact = shareContact;
+
+  function openMembersSheet(threadId) {
+    const t = state.threads.find(x => x.id === threadId);
+    if (!t) return;
+    const members = threadMembers(t);
+    openSheet(
+      '<h2>Group members (' + members.length + ')</h2>' +
+      members.map(m => {
+        const p = profileOf(m.user_id);
+        return '<div class="media-item">' + face(p) + '<span class="media-name"><b>' + esc(p?.full_name || "Member") + '</b>' + (m.user_id === state.userId ? ' <span class="muted">(you)</span>' : '') + '</span></div>';
+      }).join("") + sheetClose()
+    );
+  }
+  window.openMembersSheet = openMembersSheet;
+
+  function openAddSheet(threadId) {
+    const t = state.threads.find(x => x.id === threadId);
+    if (!t) return;
+    const existing = new Set(threadMembers(t).map(m => m.user_id));
+    const candidates = state.profiles.filter(p => !existing.has(p.user_id));
+    openSheet(
+      '<h2>Add people</h2><div id="addMemberChoices">' +
+      (candidates.map(p => '<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="' + esc(p.user_id) + '" style="width:auto"> ' + esc(p.full_name || p.email) + '</label>').join("") || '<p class="muted">Everyone is already in this group.</p>') +
+      '</div><div class="sheet-actions"><button class="gray" type="button" data-act="close-sheet">Cancel</button><button class="btn" type="button" data-act="chat-add-save" data-id="' + esc(threadId) + '">Add selected</button></div>'
+    );
+  }
+  window.openAddSheet = openAddSheet;
+
+  async function addMembers(threadId) {
+    const ids = [...document.querySelectorAll("#addMemberChoices input:checked")].map(cb => cb.value);
+    if (!ids.length) return toast("Select at least one person.");
+    const { error } = await client.from("thread_members").insert(ids.map(user_id => ({ thread_id: threadId, user_id })));
+    if (error) return toast("Could not add members: " + error.message);
+    closeSheet();
+    await loadThreads();
+    toast(ids.length + " member(s) added.");
+  }
+  window.addMembers = addMembers;
+
+  async function leaveGroup(threadId) {
+    if (!confirm("Leave this group? Another member will need to add you back.")) return;
+    const { error } = await client.from("thread_members").delete().eq("thread_id", threadId).eq("user_id", state.userId);
+    if (error) return toast("Could not leave group: " + error.message);
+    closeSheet();
+    closeChat();
+    await loadThreads();
+    toast("You left the group.");
+  }
+  window.leaveGroup = leaveGroup;
+
+  window.addEventListener("unhandledrejection", event => {
+    console.error("[Unhandled promise rejection]", event.reason);
+    const msg = event.reason?.message || String(event.reason || "Unknown error");
+    if (!/NetworkError|Failed to fetch/i.test(msg)) toast("Something went wrong. Check console for details.");
+  });
+  window.addEventListener("error", event => {
+    console.error("[Uncaught error]", event.error || event.message);
+  });
+
   $("settingFont").addEventListener("change", () => {
   localStorage.setItem("eesi-font", $("settingFont").value);
   applyDisplaySettings();
@@ -6505,9 +6423,6 @@ $("settingTheme").addEventListener("change", () => {
 $("settingTheme").value = savedTheme;
 applyTheme(savedTheme);
 applyDisplaySettings();
-/* ============================================================
-   MOBILE NATIVE GESTURES & FEEL
-   ============================================================ */
 
 let lastTouchEnd = 0;
 document.addEventListener("touchend", (e) => {
@@ -6569,9 +6484,7 @@ document.addEventListener("touchend", async (e) => {
     try {
       if (typeof reloadEverything === "function") await reloadEverything();
     } catch (err) {}
-    setTimeout(() => {
-      ind.classList.remove("active", "spinning");
-    }, 400);
+    setTimeout(() => { ind.classList.remove("active", "spinning"); }, 400);
   } else if (ptrIndicator) {
     ptrIndicator.classList.remove("active");
   }
@@ -6611,9 +6524,7 @@ document.addEventListener("touchend", (e) => {
 document.addEventListener("focusin", (e) => {
   const t = e.target;
   if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") {
-    setTimeout(() => {
-      t.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 250);
+    setTimeout(() => { t.scrollIntoView({ behavior: "smooth", block: "center" }); }, 250);
   }
 });
 
