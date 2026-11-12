@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EESI Ops">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 <style>
   body.compact .card,
 body.compact .item {
@@ -2015,25 +2016,16 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0, 0, 0, .28); }
   });
 
   async function start() {
+  // Force the login screen to show immediately
+  showAuth("Sign in to continue.");
+  
   try {
-    const recovery = (location.hash + location.search).includes("type=recovery");
-    
-    const sessionPromise = client.auth.getSession();
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000));
-    
-    const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
-    
-    if (error) return showAuth("Session check failed: " + error.message);
-    if (recovery) {
-      recoveryMode = true;
-      showAuth("Choose a new password.");
-      showResetForm();
-      return;
+    const { data, error } = await client.auth.getSession();
+    if (!error && data.session) {
+      await boot(data.session);
     }
-    if (data.session) await boot(data.session);
-    else showAuth("Sign in to continue.");
   } catch (err) {
-    showAuth("Sign in to continue.");
+    console.log("Offline mode active");
   }
 }
 
