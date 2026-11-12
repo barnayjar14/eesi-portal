@@ -6,7 +6,11 @@
 <meta name="theme-color" content="#16233a">
 <title>EESI Elevators</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20356%20196%22%3E%3Cpolygon%20points%3D%2210%2C58%20178%2C14%20346%2C58%22%20fill%3D%22%231e6cf2%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2258%22%20width%3D%22350%22%20height%3D%22134%22%20fill%3D%22%23ffe500%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Cg%20fill%3D%22%231e6cf2%22%3E%3Crect%20x%3D%2211%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%2296.75%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22182.5%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22268.25%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23fff%22%20font-family%3D%22Arial%20Black%2CArial%2Csans-serif%22%20font-weight%3D%22900%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%3Ctext%20x%3D%2249.4%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22135.1%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22220.9%22%20y%3D%22160%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%22306.6%22%20y%3D%22160%22%3EI%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20356%20196%22%3E%3Cpolygon%20points%3D%2210%2C58%20178%2C14%20346%2C58%22%20fill%3D%22%231e6cf2%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2258%22%20width%3D%22350%22%20height%3D%22134%22%20fill%3D%22%23ffe500%22%20stroke%3D%22%23111%22%20stroke-width%3D%228%22%2F%3E%3Cg%20fill%3D%22%231e6cf2%22%3E%3Crect%20x%3D%2211%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%2296.75%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22182.5%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3Crect%20x%3D%22268.25%22%20y%3D%2266%22%20width%3D%2276.75%22%20height%3D%22118%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23fff%22%20font-family%3D%22Arial%20Black%2CArial%2Csans-serif%22%20font-weight%3D%22900%22%20font-size%3D%22104%22%20text-anchor%3D%22middle%22%3E%3Ctext%20x%3D%2249.4%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22135.1%22%20y%3D%22160%22%3EE%3C%2Ftext%3E%3Ctext%20x%3D%22220.9%22%20y%3D%22160%22%3ES%3C%2Ftext%3E%3Ctext%20x%3D%22306.6%22%20y%3D%22160%22%3EI%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EESI Ops">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body.compact .card,
@@ -6625,6 +6629,15 @@ window.addEventListener("orientationchange", () => setTimeout(setAppVh, 100));
 </script>
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZ66DqtXZOyNyWKjJiJIQmpLEfU8pkZdo&callback=initLiveMap">
+</script>
+<script>
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(err => {
+        console.warn("Service worker registration failed:", err);
+      });
+    });
+  }
 </script>
 </body>
 </html>
