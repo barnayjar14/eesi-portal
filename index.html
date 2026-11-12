@@ -1183,6 +1183,36 @@ function isWithinSelfActionWindow() { return Date.now() < suppressNotificationsU
     if (u.startsWith(SUPABASE_URL + "/storage/v1/object/") && !/["'()\\\s<>]/.test(u)) return u;
     return null;
   }
+  
+// Best-effort: delete a file from a public Supabase Storage bucket given its public URL.
+// Returns true on success, false on skip/failure. Never throws.
+async function deleteStorageFile(bucket, publicUrl) {
+  if (!publicUrl || typeof publicUrl !== "string") return false;
+  const prefix = SUPABASE_URL + "/storage/v1/object/public/" + bucket + "/";
+  if (!publicUrl.startsWith(prefix)) return false;   // not ours (data: URL, other host)
+  const path = decodeURIComponent(publicUrl.slice(prefix.length).split("?")[0]);
+  if (!path || path.includes("..")) return false;
+  try {
+    const { error } = await client.storage.from(bucket).remove([path]);
+    if (error) {
+      console.warn("Storage cleanup failed for " + bucket + "/" + path + ": " + error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Storage cleanup threw for " + bucket + "/" + path + ":", err);
+    return false;
+  }
+}
+
+// Extract the photo URLs that saveReport embedded into report.details.
+function extractReportPhotoUrls(details) {
+  if (!details) return [];
+  const parts = String(details).split("\n\nPhotos:\n");
+  if (parts.length < 2) return [];
+  return parts[1].split("\n").map(s => s.trim()).filter(Boolean);
+}
+  
   async function checkAppVersion() {}
   function isAdmin() { return state.role === "admin"; }
   function roleLabel(r) { return ROLE_LABELS[r] || r || "—"; }
@@ -3488,13 +3518,17 @@ async function handleIncomingMessage() {
   }
 
   async function uploadPhoto(file, column) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return toast("Choose an image file");
-    toast("Updating picture…");
-    try {
-      let finalUrl = "";
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
-      const path = state.userId + "/" + column + "-" + Date.now() + "." + ext;
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return toast("Choose an image file");
+  toast("Updating picture…");
+  try {
+    // Best-effort: delete the previous file (if it was in Supabase Storage)
+    const oldUrl = state.profile?.[column];
+    if (oldUrl && safeUrl(oldUrl)) await deleteStorageFile("avatars", oldUrl);
+
+    let finalUrl = "";
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+    const path = state.userId + "/" + column + "-" + Date.now() + "." + ext;
       const { error } = await client.storage.from("avatars").upload(path, file, {
         upsert: true, cacheControl: "3600", contentType: file.type
       });
@@ -3514,15 +3548,17 @@ async function handleIncomingMessage() {
   }
 
   async function removePhoto(column) {
-    if (!confirm("Remove this picture?")) return;
-    const { error } = await client.from("profiles").update({ [column]: null }).eq("user_id", state.userId);
-    if (error) return toast("Could not remove: " + error.message);
-    await loadProfiles();
-    state.profile = profileOf(state.userId) || state.profile;
-    renderProfile();
-    renderAll();
-    toast("Picture removed");
-  }
+  if (!confirm("Remove this picture?")) return;
+  const oldUrl = state.profile?.[column];
+  const { error } = await client.from("profiles").update({ [column]: null }).eq("user_id", state.userId);
+  if (error) return toast("Could not remove: " + error.message);
+  if (oldUrl && safeUrl(oldUrl)) await deleteStorageFile("avatars", oldUrl);
+  await loadProfiles();
+  state.profile = profileOf(state.userId) || state.profile;
+  renderProfile();
+  renderAll();
+  toast("Picture removed");
+}
   window.removePhoto = removePhoto;
 
   $("profileFile").addEventListener("change", e => { uploadPhoto(e.target.files[0], "avatar_url"); e.target.value = ""; });
@@ -4386,10 +4422,22 @@ function getActiveSignatureSrc() {
       const { data, error } = await client.from("service_delivery_reports")
         .delete().eq("id", report.id).eq("created_by", state.userId).select("id");
       if (error) return toast("Could not delete report: " + error.message);
-      if (!data || !data.length) return toast("Report was not deleted.");
-      state.reports = state.reports.filter(item => String(item.id) !== String(report.id));
-      renderReports();
-      toast("Report deleted.");
+if (!data || !data.length) return toast("Report was not deleted.");
+
+// Best-effort: clean up attached photos in storage (fire-and-forget, does not block UI)
+const photoUrls = extractReportPhotoUrls(report.details);
+if (photoUrls.length) {
+  Promise.all(photoUrls.map(url => deleteStorageFile("report-photos", url)))
+    .then(results => {
+      const cleaned = results.filter(Boolean).length;
+      if (cleaned) console.info("Cleaned " + cleaned + " of " + photoUrls.length + " report photo(s).");
+    })
+    .catch(() => {});
+}
+
+state.reports = state.reports.filter(item => String(item.id) !== String(report.id));
+renderReports();
+toast("Report deleted.");
     }
   });
 
