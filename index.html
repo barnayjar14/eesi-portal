@@ -2045,8 +2045,9 @@ document.querySelector('[data-report-type="checklist"]')
     $("page-" + p).classList.remove("hidden");
     page = p;
     $("ticker").classList.toggle("hidden", p === "chat");
-    $("navHome").classList.toggle("active", p === "home");
-    $("navChat").classList.toggle("active", p === "chat");
+document.querySelectorAll("nav.bottom button").forEach(btn => {
+  btn.classList.toggle("active", btn.dataset.page === p);
+});
 
     if (p === "profile") renderProfile();
     if (p === "chat") { renderChatList(); renderMessages(); }
@@ -4966,7 +4967,7 @@ async function permanentlyDeleteUser(userId) {
         infoRow("⛔", "Block", "Not available yet", "planned", "block") +
         infoRow("🚫", "Restrict", "Not available yet", "planned", "restrict") +
         infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
-        infoRow("🗑", "Delete chat", "", "chat-delete", t.id, "danger"));
+        infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger"));
   }
   function groupInfoHtml(t) {
     const members = threadMembers(t);
