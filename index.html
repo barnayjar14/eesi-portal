@@ -1444,10 +1444,11 @@ function extractReportPhotoUrls(details) {
     if (run !== authRun) return;
 
     state.userId = session.user.id;
-    state.email = session.user.email;
-    state.role = roleRow.app_role;
-    state.profile = profile;
-    state.setupIssue = "";
+state.email = session.user.email;
+state.role = roleRow.app_role;
+state.profile = profile;
+loadSavedSignaturePhoto();   // ← restore persisted signature for this user
+state.setupIssue = "";
     $("setupWarn").classList.add("hidden");
 
     $("welcome").textContent = profile.full_name || session.user.email;
@@ -1497,17 +1498,25 @@ function extractReportPhotoUrls(details) {
   window.signOut = signOut;
 
   function resetState() {
-    Object.assign(state, {
-      userId: null, email: null, role: null, profile: null,
-      profiles: [], roles: {}, presence: {}, sites: [], schedules: [], dtrs: [],
-      notes: [], recs: [], announcements: [], pending: [], leaveRequests: [],
-      threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [], setupIssue: ""
-    });
-    $("welcome").textContent = "";
-    $("roleLabel").textContent = "";
-    $("messages").innerHTML = "";
-    $("setupWarn").classList.add("hidden");
+  Object.assign(state, {
+    userId: null, email: null, role: null, profile: null,
+    profiles: [], roles: {}, presence: {}, sites: [], schedules: [], dtrs: [],
+    notes: [], recs: [], announcements: [], pending: [], leaveRequests: [],
+    threads: [], unread: {}, previews: {}, chatFilter: "all", activeThread: null, messages: [], setupIssue: ""
+  });
+  $("welcome").textContent = "";
+  $("roleLabel").textContent = "";
+  $("messages").innerHTML = "";
+  $("setupWarn").classList.add("hidden");
+
+  // Clear in-memory signature so another user on this device can't see it
+  signaturePhotoDataUrl = "";
+  const sigPrevReset = $("signaturePhotoPreview");
+  if (sigPrevReset) {
+    sigPrevReset.removeAttribute("src");
+    sigPrevReset.classList.add("hidden");
   }
+}
 
   client.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") {
@@ -3568,24 +3577,63 @@ async function handleIncomingMessage() {
   const ctx = sig.getContext("2d");
   let drawing = false;
   let signaturePhotoDataUrl = "";
+// Persist the uploaded signature photo per user in localStorage
+function sigPhotoKey() {
+  return state.userId ? "eesi-sig-photo:" + state.userId : null;
+}
 
+function saveSignaturePhoto(dataUrl) {
+  const key = sigPhotoKey();
+  if (!key) return;                       // not signed in — nothing to persist
+  try {
+    if (dataUrl) {
+      localStorage.setItem(key, dataUrl);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch (e) {
+    console.warn("Could not persist signature photo:", e);
+    if (e && e.name === "QuotaExceededError") {
+      toast("Signature kept for this session only — device storage is full.");
+    }
+  }
+}
+
+function loadSavedSignaturePhoto() {
+  signaturePhotoDataUrl = "";
+  const preview = $("signaturePhotoPreview");
+  if (preview) { preview.removeAttribute("src"); preview.classList.add("hidden"); }
+  const key = sigPhotoKey();
+  if (!key) return;
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved && saved.startsWith("data:image/")) {
+      signaturePhotoDataUrl = saved;
+      if (preview) { preview.src = saved; preview.classList.remove("hidden"); }
+    }
+  } catch (e) {
+    console.warn("Could not load saved signature photo:", e);
+  }
+}
   $("signaturePhoto").addEventListener("change", async event => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast("Choose an image file."); event.target.value = ""; return; }
     try {
-      signaturePhotoDataUrl = await compressImage(file, 900, 0.85);
-      $("signaturePhotoPreview").src = signaturePhotoDataUrl;
-      $("signaturePhotoPreview").classList.remove("hidden");
-    } catch { toast("Could not load that image."); }
+  signaturePhotoDataUrl = await compressImage(file, 900, 0.85);
+  $("signaturePhotoPreview").src = signaturePhotoDataUrl;
+  $("signaturePhotoPreview").classList.remove("hidden");
+  saveSignaturePhoto(signaturePhotoDataUrl);   // ← persist to localStorage
+} catch { toast("Could not load that image."); }
   });
 
   function clearSignaturePhoto() {
-    signaturePhotoDataUrl = "";
-    $("signaturePhoto").value = "";
-    $("signaturePhotoPreview").removeAttribute("src");
-    $("signaturePhotoPreview").classList.add("hidden");
-  }
+  signaturePhotoDataUrl = "";
+  $("signaturePhoto").value = "";
+  $("signaturePhotoPreview").removeAttribute("src");
+  $("signaturePhotoPreview").classList.add("hidden");
+  saveSignaturePhoto("");   // ← remove from localStorage
+}
   window.clearSignaturePhoto = clearSignaturePhoto;
   
   
