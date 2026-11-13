@@ -2732,13 +2732,11 @@ async function loadMessages(threadId) {
 }
 async function handleIncomingMessage() {
   if (!state.userId) return;
-
   const previousUnread = { ...state.unread };
-  const thread = state.activeThread;   // ← capture BEFORE awaits
-
+  const thread = state.activeThread;
   await loadPreviews();
   await loadThreads();
-
+  // ... (rest of the code)
   let activeIncoming = [];
   if (thread) {
     const { data, error } = await client.from("messages")
