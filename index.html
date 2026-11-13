@@ -3577,6 +3577,65 @@ async function handleIncomingMessage() {
   const ctx = sig.getContext("2d");
   let drawing = false;
   let signaturePhotoDataUrl = "";
+  
+// Persist the drawn signature canvas per user in localStorage (debounced)
+let sigHasContent = false;
+let sigSaveTimer = null;
+
+function sigDrawnKey() {
+  return state.userId ? "eesi-sig-drawn:" + state.userId : null;
+}
+
+function scheduleSaveDrawnSignature() {
+  clearTimeout(sigSaveTimer);
+  sigSaveTimer = setTimeout(saveDrawnSignatureNow, 400);
+}
+
+function saveDrawnSignatureNow() {
+  sigSaveTimer = null;
+  const key = sigDrawnKey();
+  if (!key) return;
+  try {
+    if (!sigHasContent) {
+      localStorage.removeItem(key);
+      return;
+    }
+    const dataUrl = sig.toDataURL("image/png");
+    localStorage.setItem(key, dataUrl);
+  } catch (e) {
+    console.warn("Could not persist drawn signature:", e);
+    if (e && e.name === "QuotaExceededError") {
+      toast("Drawn signature kept for this session only — device storage is full.");
+    }
+  }
+}
+
+async function loadSavedDrawnSignature() {
+  sigHasContent = false;
+  try { ctx.clearRect(0, 0, sig.width, sig.height); } catch (e) {}
+  const key = sigDrawnKey();
+  if (!key) return;
+  let saved = null;
+  try { saved = localStorage.getItem(key); } catch (e) { return; }
+  if (!saved || !saved.startsWith("data:image/")) return;
+  const img = new Image();
+  const ok = await new Promise(resolve => {
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = saved;
+  });
+  if (!ok) {
+    try { localStorage.removeItem(key); } catch (e) {}
+    return;
+  }
+  try {
+    ctx.clearRect(0, 0, sig.width, sig.height);
+    ctx.drawImage(img, 0, 0, sig.width, sig.height);
+    sigHasContent = true;
+  } catch (e) {
+    console.warn("Could not restore drawn signature:", e);
+  }
+}
 // Persist the uploaded signature photo per user in localStorage
 function sigPhotoKey() {
   return state.userId ? "eesi-sig-photo:" + state.userId : null;
@@ -3648,14 +3707,15 @@ function getActiveSignatureSrc() {
     return { x: (e.clientX - r.left) * sig.width / r.width, y: (e.clientY - r.top) * sig.height / r.height };
   }
   sig.addEventListener("pointerdown", e => {
-    drawing = true; sig.setPointerCapture(e.pointerId);
-    const p = point(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
-  });
+  drawing = true; sigHasContent = true;
+  sig.setPointerCapture(e.pointerId);
+  const p = point(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+});
   sig.addEventListener("pointermove", e => {
     if (!drawing) return;
     const p = point(e); ctx.lineTo(p.x, p.y); ctx.stroke();
   });
-  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => sig.addEventListener(ev, () => { drawing = false; }));
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => sig.addEventListener(ev, () => {   drawing = false;   if (sigHasContent) scheduleSaveDrawnSignature(); }));
 
   function clearSignature() { ctx.clearRect(0, 0, sig.width, sig.height); }
   window.clearSignature = clearSignature;
