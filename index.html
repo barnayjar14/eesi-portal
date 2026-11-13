@@ -2219,15 +2219,40 @@ async function loadApprovalNotifications() {
     state.recs = data || [];
     renderRecs();
   }
-  async function loadAnnouncements() {
-    const { data, error } = await client.from("announcements")
-      .select("id,title,body,author_id,author_name,created_at")
-      .order("created_at", { ascending: false });
-    if (error) return setupError("Could not load announcements", error);
-    state.announcements = data || [];
-    renderAnnouncements();
-    renderNotices();
+let announcementsLoaded = false;
+
+async function loadAnnouncements() {
+  const { data, error } = await client.from("announcements")
+    .select("id,title,body,author_id,author_name,created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) return setupError("Could not load announcements", error);
+
+  // Check for new announcements to trigger notifications
+  const previousIds = new Set(state.announcements.map(item => String(item.id)));
+  const newAnnouncements = announcementsLoaded 
+    ? (data || []).filter(item => !previousIds.has(String(item.id))) 
+    : [];
+
+  state.announcements = data || [];
+  announcementsLoaded = true;
+  
+  renderAnnouncements();
+  renderNotices();
+
+  // If there's a new announcement, alert everyone!
+  if (newAnnouncements.length > 0 && !isWithinSelfActionWindow()) {
+    playSettingSound(true); // Play notification sound
+    vibrateForNotification();
+    toast("📢 New Announcement: " + newAnnouncements[0].title);
+    
+    // Instantly reset the ticker to show the new announcement first
+    tickerIndex = 0; 
+    if (typeof updateAnnouncementTicker === "function") {
+      updateAnnouncementTicker(); 
+    }
   }
+}
   async function loadPending() {
     if (!isManager()) { state.pending = []; renderPending(); return; }
     const { data, error } = await client.from("registration_requests")
@@ -3279,18 +3304,22 @@ function updateAnnouncementTicker() {
 
   /* ---------------- actions ---------------- */
   async function postAnnouncement() {
-    if (!isManager()) return toast("Managers only");
-    const title = $("annTitle").value.trim();
-    const body = $("annBody").value.trim();
-    if (!title || !body) return toast("Enter a title and message");
-    const { error } = await client.from("announcements").insert({
-      title, body, author_id: state.userId, author_name: state.profile?.full_name || state.email
-    });
-    if (error) return toast("Could not post: " + error.message);
-    $("annTitle").value = ""; $("annBody").value = "";
-    await loadAnnouncements();
-    toast("Announcement posted");
-  }
+  if (!isManager()) return toast("Managers only");
+  const title = $("annTitle").value.trim();
+  const body = $("annBody").value.trim();
+  if (!title || !body) return toast("Enter a title and message");
+  
+  suppressNotifications(); // Mute the chime for the person posting it
+  
+  const { error } = await client.from("announcements").insert({
+    title, body, author_id: state.userId, author_name: state.profile?.full_name || state.email
+  });
+  if (error) return toast("Could not post: " + error.message);
+  
+  $("annTitle").value = ""; $("annBody").value = "";
+  await loadAnnouncements();
+  toast("Announcement posted successfully");
+}
   window.postAnnouncement = postAnnouncement;
 
   async function saveSchedule() {
