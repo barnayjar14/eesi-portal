@@ -1171,6 +1171,8 @@ your network.</div>
   <button class="msg-context-btn" data-msg-act="copy">📋 Copy</button>
   <button class="msg-context-btn" data-msg-act="forward">↪️ Forward</button>
   <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
+  <button class="msg-context-btn hidden" data-msg-act="edit" id="ctxEditBtn">✏️
+  Edit Message</button>
   <button class="msg-context-btn hidden" data-msg-act="delete" id="ctxDeleteBtn" style="color:var(--red);">🗑 Delete</button>
 </div>
 <div id="changePasswordOverlay" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
@@ -2600,7 +2602,7 @@ async function loadAnnouncements() {
 
 async function loadMessages(threadId) {
   const { data, error } = await client.from("messages")
-.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji)")
+.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji),edited_at")
   .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
   if (state.activeThread !== threadId) return;   // ← race guard
   if (error) { toast("Could not load messages: " + error.message); return; }
@@ -3455,6 +3457,8 @@ function renderMessages() {
           : '<a href="' + esc(attachUrl) + '" target="_blank" rel="noopener">📎 ' + esc(m.attachment_name || "Attachment") + '</a>')
       : "";
     const pinIcon = m.is_pinned ? ' 📌' : '';
+    const editedLabel = m.edited_at ? ' <span style="font-size:10px;
+    opacity:0.7;">(edited)</span>' : '';
     
     // 2. REACTION OVERLAY
     let reactionHtml = "";
@@ -3499,7 +3503,7 @@ function renderMessages() {
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
       '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-text="' + esc(m.body || "") + '">' +
-        '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + pinIcon + attach +
+        '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
         '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
         reactionHtml + 
       '</div>' +
@@ -3787,6 +3791,7 @@ const startPress = (event) => {
     menu.style.left = left + "px";
 
     $("ctxDeleteBtn").classList.toggle("hidden", !isOwn);
+    $("ctxEditBtn").classList.toggle("hidden", !isOwn);
     if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
 
   }, 500); // 500ms hold
@@ -3848,6 +3853,19 @@ document.addEventListener("click", async e => {
       toast("Message pin toggled!");
       await loadMessages(state.activeThread);
     }
+    else if (act === "edit") {
+  const newText = prompt("Edit your message:", activeMsgContext.text);
+  if (newText !== null && newText.trim() !== "" && newText !== activeMsgContext.text) {
+    const { error } = await client.from("messages")
+      .update({ body: newText.trim(), edited_at: new Date().toISOString() })
+      .eq("id", Number(activeMsgContext.id))
+      .eq("user_id", state.userId);
+    
+    if (error) return toast("Could not edit: " + error.message);
+    toast("Message edited!");
+    await loadMessages(state.activeThread);
+  }
+}
     else if (act === "delete") {
   if (confirm("Delete this message for everyone?")) {
     const { error } = await client
