@@ -1078,6 +1078,13 @@ your network.</div>
           <button type="button" onclick="document.getElementById('chatImage').click()">🖼 Photo</button>
           <button type="button" onclick="document.getElementById('chatFile').click()">📎 File</button>
         </div>
+        <div id="replyingIndicator" class="chat-plus hidden" style="flex-direction:row; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-left:3px solid var(--green); margin-bottom: 8px;">
+  <div style="flex:1; min-width:0;">
+    <b style="font-size:12px; color:var(--green);">Replying to <span id="replyName"></span></b>
+    <div id="replyPreview" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted);"></div>
+  </div>
+  <button type="button" onclick="cancelReply()" style="min-height:28px; min-width:28px; padding:0; border-radius:50%; background:var(--border); color:var(--text); font-size:16px; display:grid; place-items:center;">✕</button>
+</div>
         <div id="editingIndicator" class="chat-plus hidden" style="flex-direction:row; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-left:3px solid var(--blue); margin-bottom: 8px;">
   <div style="flex:1; min-width:0;">
     <b style="font-size:12px; color:var(--blue);">Editing Message</b>
@@ -1176,7 +1183,7 @@ your network.</div>
     <span data-react="🙏">🙏</span>
   </div>
   <button class="msg-context-btn" data-msg-act="copy">📋 Copy</button>
-  <button class="msg-context-btn" data-msg-act="forward">↪️ Forward</button>
+  <<button class="msg-context-btn" data-msg-act="reply">↩️ Reply</button>
   <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
   <button class="msg-context-btn hidden" data-msg-act="edit" id="ctxEditBtn">✏️
   Edit Message</button>
@@ -2609,7 +2616,7 @@ async function loadAnnouncements() {
 
 async function loadMessages(threadId) {
   const { data, error } = await client.from("messages")
-.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji),edited_at")
+.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji),edited_at,reply_to_id")
   .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
   if (state.activeThread !== threadId) return;   // ← race guard
   if (error) { toast("Could not load messages: " + error.message); return; }
@@ -3424,7 +3431,15 @@ function renderDtrSiteOptions() {
   }
   window.pickEmoji = pickEmoji;
   
+  function cancelReply() {
+  replyingToMsg = null;
+  $("replyingIndicator").classList.add("hidden");
+}
+window.cancelReply = cancelReply;
+
   function cancelEditMessage() {
+  cancelReply();
+  // ... rest of the code ...
   editingMessageId = null;
   $("messageText").value = "";
   $("editingIndicator").classList.add("hidden");
@@ -3519,12 +3534,26 @@ function renderMessages() {
         '</div>';
       }
     }
+// REPLY LOGIC
+let replyHtml = "";
+if (m.reply_to_id) {
+  const original = state.messages.find(x => x.id === m.reply_to_id);
+  if (original) {
+    const origSender = original.user_id === state.userId ? "You" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "Member");
+    replyHtml = '<div style="background: rgba(0,0,0,0.1); border-left: 3px solid ' + (mine ? '#fff' : 'var(--blue)') + '; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; font-size: 13px;">' +
+      '<b style="color: ' + (mine ? '#fff' : 'var(--blue)') + '; font-size: 11px;">' + esc(origSender) + '</b>' +
+      '<div style="opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + esc(original.body || "📷 Photo") + '</div>' +
+    '</div>';
+  } else {
+    replyHtml = '<div style="font-size:12px; opacity:0.6; font-style:italic; margin-bottom:4px;">Replying to a deleted message</div>';
+  }
+}
 
     // 4. NORMAL MESSAGE OUTPUT
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
       '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-text="' + esc(m.body || "") + '">' +
-        '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
+        replyHtml + '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
         '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
         reactionHtml + 
       '</div>' +
@@ -3616,7 +3645,9 @@ typingChannel.on('broadcast', { event: 'typing' }, ({ payload }) => {
   }
 
   function closeChat() {
-  cancelEditMessage(); // <-- Add this line
+  cancelReply();
+  cancelEditMessage();
+  // ... rest of the code ...
   if (typingChannel) { client.removeChannel(typingChannel); typingChannel = null; }
   activeThreadToken++;
   state.activeThread = null;
@@ -3719,12 +3750,13 @@ async function sendMessage(text, file) {
     }
 
     const payload = {
-      thread_id: state.activeThread,
-      user_id: state.userId,
-      sender_name: state.profile?.full_name || state.email,
-      body: text,
-      ...attachment
-    };
+  thread_id: state.activeThread,
+  user_id: state.userId,
+  sender_name: state.profile?.full_name || state.email,
+  body: text,
+  reply_to_id: replyingToMsg ? Number(replyingToMsg.id) : null,
+  ...attachment
+};
 
     // 2. Send to database
     const { data, error } = await client.from("messages").insert(payload).select().single();
@@ -3794,8 +3826,9 @@ async function sendMessage(text, file) {
   $("messageSearch").addEventListener("input", renderMessages);
 
   let msgPressTimer = null;
-let activeMsgContext = null;
-let editingMessageId = null;
+  let activeMsgContext = null;
+  let editingMessageId = null;
+  let replyingToMsg = null;
 
 // Use touchstart and mousedown for better compatibility
 const startPress = (event) => {
@@ -3896,6 +3929,18 @@ document.addEventListener("click", async e => {
       toast("Message pin toggled!");
       await loadMessages(state.activeThread);
     }
+    else if (act === "reply") {
+  replyingToMsg = activeMsgContext;
+  const sender = profileOf(activeMsgContext.user_id)?.full_name || "Member";
+  $("replyName").textContent = sender.split(" ")[0];
+  $("replyPreview").textContent = activeMsgContext.text || "📷 Photo";
+  $("replyingIndicator").classList.remove("hidden");
+  cancelEditMessage(); // Turn off editing if it was on
+  $("messageText").focus();
+  $("emojiPop").classList.add("hidden");
+  $("chatPlus").classList.add("hidden");
+  activeMsgContext = null;
+}
     else if (act === "edit") {
   editingMessageId = activeMsgContext.id;
   $("messageText").value = activeMsgContext.text;
