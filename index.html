@@ -1447,7 +1447,8 @@ function extractReportPhotoUrls(details) {
 state.email = session.user.email;
 state.role = roleRow.app_role;
 state.profile = profile;
-loadSavedSignaturePhoto();   // ← restore persisted signature for this user
+loadSavedSignaturePhoto();
+await loadSavedDrawnSignature();   // ← ADD THIS LINE
 state.setupIssue = "";
     $("setupWarn").classList.add("hidden");
 
@@ -1516,6 +1517,17 @@ state.setupIssue = "";
     sigPrevReset.removeAttribute("src");
     sigPrevReset.classList.add("hidden");
   }
+  // Clear the visible drawn signature so another user on this device can't see it
+try {
+  sigHasContent = false;
+  const sigEl = $("signature");
+  if (sigEl) {
+    const sigCtx = sigEl.getContext("2d");
+    if (sigCtx) sigCtx.clearRect(0, 0, sigEl.width, sigEl.height);
+  }
+} catch (e) {
+  // resetState fired before signature section finished loading — safe to ignore
+}
 }
 
   client.auth.onAuthStateChange((event, session) => {
@@ -2396,11 +2408,12 @@ async function handleIncomingMessage() {
   if (!state.userId) return;
 
   const previousUnread = { ...state.unread };
+const thread = state.activeThread;   // ← captured BEFORE awaits
 
-  await loadPreviews();
-  await loadThreads();
+await loadPreviews();
+await loadThreads();
 
-  let activeIncoming = [];
+let activeIncoming = [];
   const thread = state.activeThread;   // ← capture before awaits
 
   if (thread) {
@@ -3717,7 +3730,12 @@ function getActiveSignatureSrc() {
   });
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => sig.addEventListener(ev, () => {   drawing = false;   if (sigHasContent) scheduleSaveDrawnSignature(); }));
 
-  function clearSignature() { ctx.clearRect(0, 0, sig.width, sig.height); }
+  function clearSignature() {
+  ctx.clearRect(0, 0, sig.width, sig.height);
+  sigHasContent = false;
+  const key = sigDrawnKey();
+  if (key) { try { localStorage.removeItem(key); } catch (e) {} }
+}
   window.clearSignature = clearSignature;
 
   async function downloadDtr() {
