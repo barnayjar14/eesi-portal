@@ -699,7 +699,7 @@ your network.</div>
             </div>
             <div id="pmsChecklistView">
               <h1 class="title">✅ PMS Checklist</h1>
-              <button class="gray" type="button" id="closePmsChecklist">Close checklist</button>
+              
               <p class="muted">Select an area, then a site. Follow approved PMS procedures and company safety rules.</p>
 
               <div class="tabs" id="pmsRegionTabs">
@@ -5108,15 +5108,6 @@ await loadAppNotifications();
   $("closeReportFilters").addEventListener("click", () => {
     $("reportFilterMenu").classList.add("hidden");
     $("reportFilterMenuButton").setAttribute("aria-expanded", "false");
-  });
-  $("closePmsChecklist").addEventListener("click", () => {
-    $("pmsReportContent").classList.add("hidden");
-    $("reportContent").classList.remove("hidden");
-    document.querySelectorAll("[data-report-type]").forEach(tab => {
-      tab.classList.toggle("active", tab.dataset.reportType === "service");
-    });
-    state.reportType = "service";
-    renderReports();
   });
 
   /* ---------------- PMS constants ---------------- */
