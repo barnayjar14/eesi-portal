@@ -3267,7 +3267,8 @@ function updateAnnouncementTicker() {
   window.hideGroupForm = hideGroupForm;
 
   async function createGroup() {
-    const button = document.querySelector('#chatCompose button[onclick="createGroup()"]');
+  if (!checkNetwork()) return;
+  const button = document.querySelector('#chatCompose button[onclick="createGroup()"]');
     const name = $("groupName").value.trim();
     const ids = [...new Set([...$("groupChoices").querySelectorAll("input:checked")].map(i => i.value).filter(id => id && id !== state.userId))];
     if (!name) return toast("Enter a group name.");
@@ -3407,7 +3408,8 @@ function updateAnnouncementTicker() {
   window.postAnnouncement = postAnnouncement;
 
   async function saveSchedule() {
-    if (!isManager()) return toast("Managers only");
+  if (!checkNetwork()) return;
+  if (!isManager()) return toast("Managers only");
     const title = $("schTitle").value.trim();
     const date = $("schDate").value;
     const tin = $("schIn").value;
@@ -3439,8 +3441,9 @@ function updateAnnouncementTicker() {
   }
   window.filterSchedules = filterSchedules;
 
-  async function addSite() {
-    if (!isManager()) return toast("Managers only");
+async function addSite() {
+  if (!checkNetwork()) return;
+  if (!isManager()) return toast("Managers only");
     const site = {
       name: $("siteName").value.trim(),
       address: $("siteAddress").value.trim(),
@@ -3474,7 +3477,8 @@ function updateAnnouncementTicker() {
   window.clearDtrForm = clearDtrForm;
 
   async function addDtr() {
-    const entry = {
+  if (!checkNetwork()) return;
+  const entry = {
       user_id: state.userId,
       work_date: $("dtrDate").value,
       location: $("dtrLocation").value.trim(),
@@ -3491,8 +3495,9 @@ function updateAnnouncementTicker() {
   }
   window.addDtr = addDtr;
 
-  async function saveNote() {
-    const title = $("noteTitle").value.trim();
+async function saveNote() {
+  if (!checkNetwork()) return;
+  const title = $("noteTitle").value.trim();
     const body = $("noteBody").value.trim();
     if (!title || !body) return toast("Enter a title and content");
     const { error } = await client.from("notes").insert({ user_id: state.userId, title, body });
@@ -3504,7 +3509,8 @@ function updateAnnouncementTicker() {
   window.saveNote = saveNote;
 
   async function saveRec() {
-    const rec = {
+  if (!checkNetwork()) return;
+  const rec = {
       user_id: state.userId,
       condition: $("recCondition").value,
       part: $("recPart").value.trim(),
@@ -3568,8 +3574,9 @@ function cancelEditAnnouncement() {
   $("postAnnouncementBtn").classList.replace("green", "btn");
   $("cancelAnnouncementBtn").classList.add("hidden");
 }
-  async function commentRec(id) {
-    if (!isManager()) return toast("Managers only");
+ async function commentRec(id) {
+  if (!checkNetwork()) return;
+  if (!isManager()) return toast("Managers only");
     const box = $("comment" + id);
     const body = box ? box.value.trim() : "";
     if (!body) return toast("Enter a comment");
@@ -3583,7 +3590,8 @@ function cancelEditAnnouncement() {
   }
 
   async function approveRequest(id) {
-    const req = state.pending.find(r => String(r.id) === String(id));
+  if (!checkNetwork()) return;
+  const req = state.pending.find(r => String(r.id) === String(id));
     if (!req) return;
     if (!confirm("Approve " + req.full_name + "?")) return;
     const { data: existing } = await client.from("user_roles").select("user_id").eq("user_id", req.user_id).maybeSingle();
@@ -3630,7 +3638,8 @@ function cancelEditAnnouncement() {
   }
 
   async function declineRequest(id) {
-    if (!confirm("Decline this registration?")) return;
+  if (!checkNetwork()) return;
+  if (!confirm("Decline this registration?")) return;
     const { error } = await client.from("registration_requests").update({ status: "declined" }).eq("id", id);
     if (error) return toast("Could not decline: " + error.message);
     await loadPending();
@@ -3639,7 +3648,8 @@ function cancelEditAnnouncement() {
 
   let deletePending = false;
   async function deleteRow(table, id, reload) {
-    if (deletePending) return;
+  if (!checkNetwork()) return;
+  if (deletePending) return;
     deletePending = true;
     const dialog = document.createElement("dialog");
     dialog.className = "delete-dialog";
@@ -3667,7 +3677,8 @@ function cancelEditAnnouncement() {
   }
 
   async function saveProfile() {
-    const name = $("pName").value.trim();
+  if (!checkNetwork()) return;
+  const name = $("pName").value.trim();
     if (!name) return toast("Full name is required");
     const patch = {
       user_id: state.userId, full_name: name, email: state.email || null,
@@ -3714,6 +3725,7 @@ resolve(canvas.toDataURL("image/jpeg", quality));
   }
 
   async function uploadPhoto(file, column) {
+  if (!checkNetwork()) return;
   if (!file) return;
   if (!file.type.startsWith("image/")) return toast("Choose an image file");
   toast("Updating picture…");
@@ -5115,7 +5127,8 @@ await loadAppNotifications();
   });
 
   $("savePmsRecordButton").addEventListener("click", async () => {
-    const site = pmsSelectedSite();
+  if (!checkNetwork()) return;
+  const site = pmsSelectedSite();
     const status = $("pmsRecordStatus");
     if (!state.userId) { status.textContent = "Sign in before saving a checklist."; return; }
     if (!site) { status.textContent = "Select a site first."; return; }
