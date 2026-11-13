@@ -1078,6 +1078,13 @@ your network.</div>
           <button type="button" onclick="document.getElementById('chatImage').click()">🖼 Photo</button>
           <button type="button" onclick="document.getElementById('chatFile').click()">📎 File</button>
         </div>
+        <div id="editingIndicator" class="chat-plus hidden" style="flex-direction:row; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-left:3px solid var(--blue); margin-bottom: 8px;">
+  <div style="flex:1; min-width:0;">
+    <b style="font-size:12px; color:var(--blue);">Editing Message</b>
+    <div id="editingPreview" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted);"></div>
+  </div>
+  <button type="button" onclick="cancelEditMessage()" style="min-height:28px; min-width:28px; padding:0; border-radius:50%; background:var(--border); color:var(--text); font-size:16px; display:grid; place-items:center;">✕</button>
+</div>
         <div id="emojiPop" class="emoji-pop hidden">
           <span onclick="pickEmoji('😀')">😀</span><span onclick="pickEmoji('😂')">😂</span>
           <span onclick="pickEmoji('😅')">😅</span><span onclick="pickEmoji('😊')">😊</span>
@@ -3416,7 +3423,22 @@ function renderDtrSiteOptions() {
     updateSendBtn();
   }
   window.pickEmoji = pickEmoji;
-  function updateSendBtn() { $("sendBtn").textContent = $("messageText").value.trim() ? "➤" : "👍"; }
+  
+  function cancelEditMessage() {
+  editingMessageId = null;
+  $("messageText").value = "";
+  $("editingIndicator").classList.add("hidden");
+  updateSendBtn();
+}
+window.cancelEditMessage = cancelEditMessage;
+
+  function updateSendBtn() { 
+  if (editingMessageId) {
+    $("sendBtn").textContent = "✓"; 
+  } else {
+    $("sendBtn").textContent = $("messageText").value.trim() ? "➤" : "👍"; 
+  }
+}
 
   function openChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
@@ -3594,8 +3616,11 @@ typingChannel.on('broadcast', { event: 'typing' }, ({ payload }) => {
   }
 
   function closeChat() {
-    if (typingChannel) { client.removeChannel(typingChannel); typingChannel =
-    null; }
+  cancelEditMessage(); // <-- Add this line
+  if (typingChannel) { client.removeChannel(typingChannel); typingChannel = null; }
+  activeThreadToken++;
+  state.activeThread = null;
+  // ... (rest of the code)
   activeThreadToken++;
   state.activeThread = null;
   state.messages = [];
@@ -3721,14 +3746,32 @@ async function sendMessage(text, file) {
 }
 
   $("messageForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const input = $("messageText");
-    const text = input.value.trim();
-    input.value = "";
-    updateSendBtn();
-    if (!text) { await sendMessage("👍", null); return; }
-    await sendMessage(text, null);
-  });
+  e.preventDefault();
+  const input = $("messageText");
+  const text = input.value.trim();
+  
+  // If we are editing a message
+  if (editingMessageId) {
+    if (!text) return toast("Message cannot be empty.");
+    const { error } = await client.from("messages")
+      .update({ body: text, edited_at: new Date().toISOString() })
+      .eq("id", Number(editingMessageId))
+      .eq("user_id", state.userId);
+    
+    if (error) return toast("Could not edit: " + error.message);
+    cancelEditMessage();
+    toast("Message edited!");
+    await loadMessages(state.activeThread);
+    return;
+  }
+
+  // Normal message sending
+  input.value = "";
+  updateSendBtn();
+  if (!text) { await sendMessage("👍", null); return; }
+  await sendMessage(text, null);
+});
+
   $("messageText").addEventListener("input", updateSendBtn);
   $("messageText").addEventListener("input", () => {
   if (!state.activeThread || !typingChannel) return;
@@ -3752,6 +3795,7 @@ async function sendMessage(text, file) {
 
   let msgPressTimer = null;
 let activeMsgContext = null;
+let editingMessageId = null;
 
 // Use touchstart and mousedown for better compatibility
 const startPress = (event) => {
@@ -3853,17 +3897,15 @@ document.addEventListener("click", async e => {
       await loadMessages(state.activeThread);
     }
     else if (act === "edit") {
-  const newText = prompt("Edit your message:", activeMsgContext.text);
-  if (newText !== null && newText.trim() !== "" && newText !== activeMsgContext.text) {
-    const { error } = await client.from("messages")
-      .update({ body: newText.trim(), edited_at: new Date().toISOString() })
-      .eq("id", Number(activeMsgContext.id))
-      .eq("user_id", state.userId);
-    
-    if (error) return toast("Could not edit: " + error.message);
-    toast("Message edited!");
-    await loadMessages(state.activeThread);
-  }
+  editingMessageId = activeMsgContext.id;
+  $("messageText").value = activeMsgContext.text;
+  $("messageText").focus();
+  $("editingPreview").textContent = activeMsgContext.text;
+  $("editingIndicator").classList.remove("hidden");
+  $("emojiPop").classList.add("hidden");
+  $("chatPlus").classList.add("hidden");
+  updateSendBtn();
+  activeMsgContext = null;
 }
     else if (act === "delete") {
   if (confirm("Delete this message for everyone?")) {
