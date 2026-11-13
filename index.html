@@ -1257,6 +1257,27 @@ your network.</div>
   $("settingNotifications").checked = localStorage.getItem("eesi-notifications") !== "off";
   $("settingVibration").checked = localStorage.getItem("eesi-vibration") === "on";
   $("settingSound").value = localStorage.getItem("eesi-sound") || "off";
+function resetSettingsTimer() {
+  // Clear any existing timer
+  clearTimeout(settingsAutoCloseTimer);
+  
+  // Only start the timer if the menu is actually open
+  if (!$("settingsMenu").classList.contains("hidden")) {
+    settingsAutoCloseTimer = setTimeout(() => {
+      $("settingsMenu").classList.add("hidden");
+    }, 10000); // 10,000 milliseconds = 10 seconds
+  }
+}
+
+// Listen for any changes or clicks inside the settings menu
+$("settingsMenu").addEventListener("change", resetSettingsTimer);
+$("settingsMenu").addEventListener("click", (e) => {
+  // If they click a button, or an input, start the timer
+  if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') {
+    resetSettingsTimer();
+  }
+});
+
 
   $("settingSound").addEventListener("change", () => {
     localStorage.setItem("eesi-sound", $("settingSound").value);
@@ -1350,7 +1371,8 @@ updateNetworkStatus();
   
   let editingReportId = null; 
   let editingAnnouncementId = null; // <-- ADD THIS LINE
-  let authRun = 0;
+ let authRun = 0;
+let settingsAutoCloseTimer = null; // <-- Add this line
   
 /* Suppress notification sounds for our own actions (submit report, approve member, etc.) */
 let suppressNotificationsUntil = 0;
@@ -1988,8 +2010,17 @@ requestNotificationPermission(); // <-- ADD THIS
     if ("vibrate" in navigator) navigator.vibrate([120, 60, 120]);
   }
 
-  function toggleSettingsMenu() { $("settingsMenu").classList.toggle("hidden"); }
-  $("closeSettingsButton").addEventListener("click", () => $("settingsMenu").classList.add("hidden"));
+  function toggleSettingsMenu() { 
+  const menu = $("settingsMenu");
+  menu.classList.toggle("hidden"); 
+  if (menu.classList.contains("hidden")) {
+    clearTimeout(settingsAutoCloseTimer);
+  }
+}
+  $("closeSettingsButton").addEventListener("click", () => {
+  $("settingsMenu").classList.add("hidden");
+  clearTimeout(settingsAutoCloseTimer);
+});
   window.toggleSettingsMenu = toggleSettingsMenu;
 
   function toggleTheme() {
