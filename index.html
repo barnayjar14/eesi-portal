@@ -3552,7 +3552,8 @@ return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
   let msgPressTimer = null;
 let activeMsgContext = null;
 
-$("messages").addEventListener("pointerdown", event => {
+// Use touchstart and mousedown for better compatibility
+const startPress = (event) => {
   const bubble = event.target.closest(".msgr-bub");
   if (!bubble || event.target.tagName === 'A' || event.target.tagName === 'IMG') return;
 
@@ -3564,9 +3565,15 @@ $("messages").addEventListener("pointerdown", event => {
     const text = bubble.dataset.text || "";
 
     if (!msgId) return;
+
+    // Stop text selection while menu is open
+    if (window.getSelection) window.getSelection().removeAllRanges();
+
     activeMsgContext = { id: msgId, isOwn, text };
 
     const menu = $("messageContextMenu");
+    if (!menu) return toast("Menu HTML is missing!");
+
     menu.classList.remove("hidden");
     
     // Position menu beside the bubble
@@ -3585,16 +3592,22 @@ $("messages").addEventListener("pointerdown", event => {
     if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
 
   }, 500); // 500ms hold
-});
+};
 
-["pointerup", "pointermove", "pointercancel", "pointerleave"].forEach(ev => {
-  $("messages").addEventListener(ev, () => clearTimeout(msgPressTimer));
+// Clear timer if they let go too early
+const cancelPress = () => clearTimeout(msgPressTimer);
+
+$("messages").addEventListener("touchstart", startPress, { passive: true });
+$("messages").addEventListener("mousedown", startPress);
+
+["touchend", "touchmove", "touchcancel", "mouseup", "mouseleave"].forEach(ev => {
+  $("messages").addEventListener(ev, cancelPress);
 });
 
 // Handle Menu Actions
 document.addEventListener("click", async e => {
   const menu = $("messageContextMenu");
-  if (menu.classList.contains("hidden")) return;
+  if (!menu || menu.classList.contains("hidden")) return;
 
   if (!menu.contains(e.target) && !e.target.closest(".msgr-bub")) {
     menu.classList.add("hidden");
