@@ -2887,7 +2887,7 @@ function updateAnnouncementTicker() {
     return '<tr><td>' + esc(fmtTableDate(r.work_date)) + '</td>' +
       '<td>' + esc(profileName(r.user_id)) + '</td>' +
       '<td>' + esc(r.location) + '<div class="muted">' + esc(r.job) + approvalHtml + '</div></td>' +
-      '<td>' + esc(r.time_in) + ' – ' + esc(r.time_out) + '</td>' +
+      '<td>' + esc(time12(r.time_in)) + ' – ' + esc(time12(r.time_out)) + '</td>' +
       '<td style="font-weight:bold;">' + totalHours.toFixed(2) + '</td>' +
       '<td>' + (mine || isAdmin() ? '<button type="button" aria-label="Delete DTR entry" class="red small-btn" data-act="del-dtr" data-id="' + esc(r.id) + '">×</button>' : '') + '</td></tr>';
   }).join("") || '<tr><td colspan="6" class="muted">No DTR entries yet.</td></tr>';
@@ -3003,7 +3003,7 @@ function updateAnnouncementTicker() {
         '<div class="item clickable" onclick="go(\'schedule\')">' +
         '<b>📅 Schedule: ' + esc(s.title) + ' (' + esc(s.region) + ')</b>' +
         (isAssigned ? ' <span class="badge" style="background:var(--green)">Assigned to You</span>' : '') +
-        '<div class="muted">' + esc(fmtDay(s.scheduled_date)) + ' · ' + esc(s.time_in || "—") + '–' + esc(s.time_out || "—") + '</div>' +
+        '<div class="muted">' + esc(fmtDay(s.scheduled_date)) + ' · ' + esc(time12(s.time_in) || "—") + '–' + esc(time12(s.time_out) || "—") + '</div>' +
         (cleanNotes ? '<div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(cleanNotes) + '</div>' : '') +
         '</div>' });
     });
