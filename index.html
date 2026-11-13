@@ -1517,17 +1517,18 @@ state.setupIssue = "";
     sigPrevReset.removeAttribute("src");
     sigPrevReset.classList.add("hidden");
   }
-  // Clear the visible drawn signature so another user on this device can't see it
-try {
-  sigHasContent = false;
-  const sigEl = $("signature");
-  if (sigEl) {
-    const sigCtx = sigEl.getContext("2d");
-    if (sigCtx) sigCtx.clearRect(0, 0, sigEl.width, sigEl.height);
+
+  // Clear the visible drawn signature too
+  try {
+    sigHasContent = false;
+    const sigEl = $("signature");
+    if (sigEl) {
+      const sigCtx = sigEl.getContext("2d");
+      if (sigCtx) sigCtx.clearRect(0, 0, sigEl.width, sigEl.height);
+    }
+  } catch (e) {
+    // resetState fired before signature section finished loading — safe to ignore
   }
-} catch (e) {
-  // resetState fired before signature section finished loading — safe to ignore
-}
 }
 
   client.auth.onAuthStateChange((event, session) => {
@@ -2408,13 +2409,12 @@ async function handleIncomingMessage() {
   if (!state.userId) return;
 
   const previousUnread = { ...state.unread };
+  const thread = state.activeThread;   // ← capture BEFORE awaits
 
   await loadPreviews();
   await loadThreads();
 
   let activeIncoming = [];
-  const thread = state.activeThread;   // ← capture before awaits
-
   if (thread) {
     const { data, error } = await client.from("messages")
       .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
@@ -5065,9 +5065,9 @@ await loadAppNotifications();
     if (!window.google?.maps) { statusBox.textContent = "Google Maps is still loading. Try again shortly."; return; }
     if (!liveMapInstance) window.initLiveMap();
     if (!liveMapInstance) { statusBox.textContent = "Map could not be initialized."; return; }
-    await loadRoles();
+if (!Object.keys(state.roles).length) await loadRoles();
     const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const { data, error } = await client.from("employee_locations")
+      const { data, error } = await client.from("employee_locations")
       .select("user_id,latitude,longitude,updated_at").eq("sharing", true).gte("updated_at", cutoff);
     if (error) { statusBox.textContent = "Could not load locations: " + error.message; return; }
     liveLocationMarkers.forEach(marker => marker.setMap(null));
