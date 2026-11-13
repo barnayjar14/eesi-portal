@@ -348,9 +348,30 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
 .fb-post-time{font-size:12px;color:var(--muted);}
 .fb-post-content{padding:0 12px 10px;font-size:15px;color:var(--text);line-height:1.4;}
 .fb-post-image{width:100%;max-height:400px;object-fit:cover;display:block;}
+/* Offline Banner */
+#offlineBanner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: var(--red);
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 9999;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
 </style>
 </head>
 <body>
+  <body>
+<div id="offlineBanner" class="hidden">⚠️ No Internet Connection. Please check
+your network.</div>
 <!-- EESI logo (single source) -->
 <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="eesiLogo" viewBox="0 0 356 196"><polygon points="10,58 178,14 346,58" fill="#1e6cf2" stroke="#111" stroke-width="2" stroke-linejoin="miter"/><rect x="3" y="58" width="350" height="134" fill="#ffe500" stroke="#111" stroke-width="2"/><g fill="#1e6cf2"><rect x="11" y="66" width="76.75" height="118"/><rect x="96.75" y="66" width="76.75" height="118"/><rect x="182.5" y="66" width="76.75" height="118"/><rect x="268.25" y="66" width="76.75" height="118"/></g><g fill="#fff" font-family="Arial Black,Helvetica Neue,Arial,sans-serif" font-weight="900" font-size="96" text-anchor="middle"><text x="49.4" y="159">E</text><text x="135.1" y="159">E</text><text x="220.9" y="159">S</text><text x="306.6" y="159">I</text></g></symbol></svg>
 
@@ -1159,6 +1180,32 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
     reports: [], reportType: "service",
     regionFilter: "all", setupIssue: "", booted: false
   };
+  
+  // Network Status Checker
+function updateNetworkStatus() {
+  const banner = $("offlineBanner");
+  if (!navigator.onLine) {
+    banner.classList.remove("hidden");
+    document.body.style.paddingTop = "40px"; // Push content down so banner doesn't cover it
+  } else {
+    banner.classList.add("hidden");
+    document.body.style.paddingTop = ""; // Restore padding
+  }
+}
+
+window.addEventListener("online", () => {
+  updateNetworkStatus();
+  toast("Internet connection restored.");
+});
+
+window.addEventListener("offline", () => {
+  updateNetworkStatus();
+  toast("You are offline. Please check your connection.");
+});
+
+// Check on boot
+updateNetworkStatus();
+  
   let editingReportId = null; 
   let editingAnnouncementId = null; // <-- ADD THIS LINE
   let authRun = 0;
@@ -1225,6 +1272,13 @@ function extractReportPhotoUrls(details) {
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => box.classList.add("hidden"), 2600);
   }
+  function checkNetwork() {
+  if (!navigator.onLine) {
+    toast("No internet connection. Action cancelled.");
+    return false;
+  }
+  return true;
+}
   function fmtDate(v) {
     if (!v) return "";
     const d = new Date(v);
@@ -1306,8 +1360,9 @@ function extractReportPhotoUrls(details) {
   $("resetBackButton").addEventListener("click", () => { showLoginForm(); setAuthStatus("Sign in to continue."); });
 
   $("loginForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    $("loginButton").disabled = true;
+  e.preventDefault();
+  if (!checkNetwork()) return;
+  $("loginButton").disabled = true;
     setAuthStatus("Signing in…");
     const { data, error } = await client.auth.signInWithPassword({
       email: $("email").value.trim(), password: $("password").value
@@ -1957,7 +2012,8 @@ window.refreshLeaveBalances = function () {
   }
 
   async function submitLeaveRequest() {
-    const start = $("leaveStart").value;
+  if (!checkNetwork()) return;
+  const start = $("leaveStart").value;
     const end = $("leaveEnd").value;
     if (!start || !end) return toast("Choose both leave dates.");
     if (end < start) return toast("End date must be on or after the start date.");
@@ -3243,7 +3299,8 @@ function updateAnnouncementTicker() {
   window.createGroup = createGroup;
 
   async function sendMessage(text, file) {
-    const MAX_FILE_MB = 100;
+  if (!checkNetwork()) return;
+  const MAX_FILE_MB = 100;
     text = (text || "").trim();
     if (!text && !file) return;
     if (!state.activeThread) return toast("Open a chat first");
@@ -3316,6 +3373,7 @@ function updateAnnouncementTicker() {
 
   /* ---------------- actions ---------------- */
   async function postAnnouncement() {
+  if (!checkNetwork()) return;
   if (!isManager()) return toast("Managers only");
   const title = $("annTitle").value.trim();
   const body = $("annBody").value.trim();
@@ -4700,8 +4758,9 @@ toast("Report deleted.");
     });
   });
 
-  $("submitReportButton").addEventListener("click", async () => {
-    const siteId = Number($("reportSite").value);
+  $("$("submitReportButton").addEventListener("click", async () => {
+  if (!checkNetwork()) return;
+  const siteId = Number($("reportSite").value);
     const reportDate = $("reportDate").value;
     const title = $("reportTitle").value.trim();
     const details = $("reportDetails").value.trim();
