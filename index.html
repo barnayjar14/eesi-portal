@@ -3609,9 +3609,6 @@ async function sendMessage(text, file) {
   text = (text || "").trim();
   if (!text && !file) return;
   if (!state.activeThread) return toast("Open a chat first");
-  text = (text || "").trim();
-  if (!text && !file) return;
-  if (!state.activeThread) return toast("Open a chat first");
 
   // 1. OPTIMISTIC UI: Show message instantly before DB saves
   const tempId = "temp-" + Date.now();
