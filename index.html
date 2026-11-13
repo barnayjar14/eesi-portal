@@ -1218,7 +1218,7 @@ your network.</div>
     <span data-react="🙏">🙏</span>
   </div>
   <button class="msg-context-btn" data-msg-act="copy">📋 Copy</button>
-  <<button class="msg-context-btn" data-msg-act="reply">↩️ Reply</button>
+  <button class="msg-context-btn" data-msg-act="reply">↩️ Reply</button>
   <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
   <button class="msg-context-btn hidden" data-msg-act="edit" id="ctxEditBtn">✏️
   Edit Message</button>
@@ -3587,7 +3587,7 @@ if (m.reply_to_id) {
     // 4. NORMAL MESSAGE OUTPUT
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
-      '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-text="' + esc(m.body || "") + '">' +
+      '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-user-id="' + esc(m.user_id) + '" data-text="' + esc(m.body || "") + '">' +
         replyHtml + '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
         '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
         reactionHtml + 
@@ -3883,7 +3883,7 @@ const startPress = (event) => {
     // Stop text selection while menu is open
     if (window.getSelection) window.getSelection().removeAllRanges();
 
-    activeMsgContext = { id: msgId, isOwn, text };
+    activeMsgContext = { id: msgId, isOwn, text, user_id: bubble.dataset.userId };
 
     const menu = $("messageContextMenu");
     if (!menu) return toast("Menu HTML is missing!");
