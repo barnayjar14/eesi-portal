@@ -1277,6 +1277,30 @@ function extractReportPhotoUrls(details) {
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => box.classList.add("hidden"), 2600);
   }
+  function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+    Notification.requestPermission();
+  }
+}
+
+async function showBackgroundNotification(title, body, vibratePattern = [200, 100, 200]) {
+  // Only show if the app is in the background
+  if (document.visibilityState === "visible") return; 
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.ready;
+    registration.showNotification(title, {
+      body: body,
+      icon: "./icons/icon-192.png",
+      badge: "./icons/icon-192.png",
+      vibrate: vibratePattern, 
+      tag: "eesi-notification",
+      renotify: true 
+    });
+  }
+}
   function checkNetwork() {
   if (!navigator.onLine) {
     toast("No internet connection. Action cancelled.");
@@ -1537,6 +1561,7 @@ state.setupIssue = "";
     $("roleLabel").textContent = roleLabel(state.role);
     updateAccess();
     showApp();
+requestNotificationPermission(); // <-- ADD THIS
     showDailyVerse();
     applyTheme(localStorage.getItem("eesi-theme") || "system");
 
@@ -2335,6 +2360,11 @@ async function loadAnnouncements() {
       updateAnnouncementTicker(); 
     }
   }
+  showBackgroundNotification(
+  "📢 New Announcement", 
+  newAnnouncements[0].title + ": " + newAnnouncements[0].body, 
+  [300, 100, 300, 100, 300]
+);
 }
   async function loadPending() {
     if (!isManager()) { state.pending = []; renderPending(); return; }
@@ -2432,18 +2462,31 @@ async function loadMessages(threadId) {
   const LIVE_TABLES = Object.keys(RELOADERS);
 
   function queueReload(table) {
-    clearTimeout(timers[table]);
-    timers[table] = setTimeout(async () => {
-      delete timers[table];
-      if (!state.userId) return;
-      const fn = RELOADERS[table];
-      if (fn) await fn();
-      if (table !== "messages") {
-        renderAll();
-        if (page === "admin") renderAdmin();
+  clearTimeout(timers[table]);
+  timers[table] = setTimeout(async () => {
+    delete timers[table];
+    if (!state.userId) return;
+    
+    const fn = RELOADERS[table];
+    if (fn) await fn();
+    
+    if (table !== "messages") {
+      renderAll();
+      if (page === "admin") renderAdmin();
+    }
+
+    // Trigger Background Notifications for specific tables
+    if (!isWithinSelfActionWindow()) {
+      if (table === "schedules") {
+        showBackgroundNotification("📅 New Schedule", "A new schedule has been added.", [300, 100, 300]);
+      } else if (table === "recommendations" || table === "recommendation_comments") {
+        showBackgroundNotification("📌 New Recommendation", "A new recommendation or comment was added.", [200, 100, 200]);
+      } else if (table === "registration_requests" && isManager()) {
+        showBackgroundNotification("⏳ Pending Registration", "A new user is waiting for approval.", [200, 100, 200]);
       }
-    }, 280);
-  }
+    }
+  }, 280);
+}
 
   function teardownLive() {
     Object.keys(timers).forEach(t => { clearTimeout(timers[t]); delete timers[t]; });
@@ -2549,6 +2592,13 @@ async function handleIncomingMessage() {
 
   if ((unreadIncreased || activeNewUnmuted) && !isWithinSelfActionWindow()) {
   playSettingSound(true);
+  // Trigger background notification
+  const totalUnread = Object.values(state.unread).reduce((a, b) => a + b, 0);
+  showBackgroundNotification(
+    "💬 New Chat Message", 
+    "You have " + totalUnread + " unread message(s).", 
+    [200, 100, 200]
+  );
 }
 
   renderChatList();
