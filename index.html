@@ -5169,6 +5169,34 @@ await loadAppNotifications();
       UP:   [ { id: "Esc. No. 13", floor: "G-2", note: "2 Lgt. Newel Guide Roller" }, { id: "Esc. No. 29", floor: "2-3" }, { id: "Esc. No. 15", floor: "3-4" } ]
     }
   };
+  const ELEVATOR_REPLACEMENT_PARTS = {
+  "🧵 Ropes, Sheaves & Suspension": [
+    "Main / suspension ropes", "Governor ropes", "Compensation ropes", 
+    "Traction sheaves", "Deflector sheaves / pulleys", "Door hanger rollers / rope wheels"
+  ],
+  "⚙️ Brake & Traction Machine": [
+    "Brake pads / linings", "Brake coils / solenoids", "Traction machine bearings", 
+    "Gearbox components", "Gears / gear teeth (if worn)"
+  ],
+  "🚪 Door System": [
+    "Door shoe / guide shoe inserts", "Door hanger rollers", "Car door connecting rope / drive rope", 
+    "Door link / shaft / bearing parts", "Door motor", "Door switches / contacts"
+  ],
+  "🛡️ Safety Gear & Governor": [
+    "Safety gear braking elements / assembly", "Overspeed governor electromagnet", 
+    "Governor cam / spring seats", "Governor nylon / spring components", "Governor rope"
+  ],
+  "⚡ Electrical & Control": [
+    "Emergency backup battery", "Electromagnetic contactors", "Relays", "Wiring / cables", 
+    "Stabilized power supply", "Reactors / transformers", "Lighting fixtures", "Intercom unit", "Blower / fan"
+  ],
+  "💧 Hydraulic System": [
+    "Hydraulic fluid", "Seals", "Packings", "Gaskets", "Pump components", "Valve components"
+  ],
+  "🔩 General Mechanical & Rubber Parts": [
+    "Tension springs", "Torsion springs", "Compression springs", "Rubber rings", "Rubber pads", "Gaskets"
+  ]
+};
   const ELEVATOR_PMS_CATEGORIES = {
   "⚙️ Mechanical & Machine Room": [
     "Check machine/gearbox condition, operation, and lubrication",
@@ -5378,6 +5406,37 @@ const ESCALATOR_REPLACEMENT_PARTS = [
   }
   return html;
 }
+function renderElevatorReplacementParts() {
+  let html = '<div class="card" style="border: 2px solid var(--amber); background: var(--bg);">' +
+    '<h3 style="margin-top:0; color: var(--amber);">⚠️ Replacement Parts Attention</h3>' +
+    '<p class="muted" style="margin-bottom: 12px; font-size: 13px;">Check and mark parts that need replacement.</p>';
+
+  Object.entries(ELEVATOR_REPLACEMENT_PARTS).forEach(([category, items]) => {
+    html += '<h4 style="margin: 16px 0 8px; font-size: 14px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 4px;">' + esc(category) + '</h4>';
+    
+    items.forEach((part, index) => {
+      const safeId = "el-repl-" + category.replace(/[^a-zA-Z0-9]/g, '') + "-" + index;
+      html += '<div class="item" style="border-bottom:1px solid var(--border); padding-bottom:10px; background: transparent;">' +
+        '<b style="display:block; margin-bottom:8px; font-size: 14px;">' + esc(part) + '</b>' +
+        '<div class="row" style="gap:8px;">' +
+          '<div class="field" style="margin:0;">' +
+            '<select id="' + safeId + '-status" data-pms-status="' + safeId + '">' +
+              '<option value="">Not recorded</option>' +
+              '<option value="ok">OK</option>' +
+              '<option value="replace" style="color: var(--red); font-weight: bold;">Needs Replacement</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="field" style="margin:0;">' +
+            '<input id="' + safeId + '-note" type="text" data-pms-item-note="' + safeId + '" placeholder="Remarks (e.g. quantity, damage)">' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+  });
+
+  html += '</div>';
+  return html;
+}
   function renderElevatorChecklist(unitName) {
   let html = '<div class="card" style="background:var(--blue); color:white; margin-bottom:12px;">' +
     '<h3 style="margin:0; color:white;">🛗 ' + esc(unitName) + ' - PMS Checklist</h3>' +
@@ -5406,8 +5465,11 @@ const ESCALATOR_REPLACEMENT_PARTS = [
       '</div>';
     });
     
-    html += '</div>';
+        html += '</div>';
   });
+
+  // Add the Replacement Parts Attention section at the bottom
+  html += renderElevatorReplacementParts();
 
   return html;
 }
