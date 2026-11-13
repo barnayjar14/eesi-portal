@@ -1173,6 +1173,29 @@ your network.</div>
   <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
   <button class="msg-context-btn hidden" data-msg-act="delete" id="ctxDeleteBtn" style="color:var(--red);">🗑 Delete</button>
 </div>
+<div id="changePasswordOverlay" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
+  <div class="card">
+    <h2 id="changePasswordTitle" style="margin-top:0;">Change Password</h2>
+    <div class="field">
+      <label for="currentPassword">Current Password</label>
+      <input id="currentPassword" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label for="newPasswordModal">New Password</label>
+      <input id="newPasswordModal" type="password" minlength="8" autocomplete="new-password" required>
+    </div>
+    <div class="field">
+      <label for="retypeNewPassword">Re-type New Password</label>
+      <input id="retypeNewPassword" type="password" minlength="8" autocomplete="new-password" required>
+    </div>
+    <p id="changePasswordStatus" class="muted" role="status" style="min-height:20px;"></p>
+    <div class="inline-actions" style="justify-content:flex-end; margin-top:16px;">
+      <button class="gray" type="button" onclick="closeChangePasswordModal()">Cancel</button>
+      <button class="btn" type="button" id="submitChangePasswordBtn" onclick="submitChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
 <div id="addSiteOverlay" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="addSiteTitle">
   <div class="card">
     <h2 id="addSiteTitle">Add site</h2>
@@ -5040,15 +5063,97 @@ async function toggleBlock(userId) {
   }
 
   /* ---------------- chat-info / settings action implementations ---------------- */
-  async function changePassword() {
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return toast("Sign in first.");
-    const newPassword = prompt("Enter your new password (min 8 characters):");
-    if (!newPassword || newPassword.length < 8) return toast("Password must be at least 8 characters.");
-    const { error } = await client.auth.updateUser({ password: newPassword });
-    if (error) return toast("Could not update password: " + error.message);
-    toast("Password updated successfully.");
+  function changePassword() {
+  if (!state.email) return toast("Sign in first.");
+  
+  // Reset the form
+  $("currentPassword").value = "";
+  $("newPasswordModal").value = "";
+  $("retypeNewPassword").value = "";
+  $("changePasswordStatus").textContent = "";
+  $("changePasswordStatus").style.color = "var(--muted)";
+  $("submitChangePasswordBtn").disabled = false;
+  
+  // Show the popup
+  $("changePasswordOverlay").classList.remove("hidden");
+}
+window.changePassword = changePassword;
+
+function closeChangePasswordModal() {
+  $("changePasswordOverlay").classList.add("hidden");
+}
+window.closeChangePasswordModal = closeChangePasswordModal;
+
+async function submitChangePassword() {
+  const currentPass = $("currentPassword").value;
+  const newPass = $("newPasswordModal").value;
+  const retypePass = $("retypeNewPassword").value;
+  const status = $("changePasswordStatus");
+  const btn = $("submitChangePasswordBtn");
+
+  // 1. Validate inputs
+  if (!currentPass || !newPass || !retypePass) {
+    status.textContent = "Please fill in all fields.";
+    status.style.color = "var(--red)";
+    return;
   }
+  if (newPass.length < 8) {
+    status.textContent = "New password must be at least 8 characters.";
+    status.style.color = "var(--red)";
+    return;
+  }
+  if (newPass !== retypePass) {
+    status.textContent = "New passwords do not match.";
+    status.style.color = "var(--red)";
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = "Verifying current password...";
+  status.style.color = "var(--blue)";
+
+  try {
+    // 2. Verify the Current Password first by attempting a sign-in
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: state.email,
+      password: currentPass
+    });
+
+    if (signInError) {
+      status.textContent = "Current password is incorrect.";
+      status.style.color = "var(--red)";
+      btn.disabled = false;
+      return;
+    }
+
+    status.textContent = "Updating password...";
+
+    // 3. Update the password in Supabase
+    const { error: updateError } = await client.auth.updateUser({ password: newPass });
+    
+    if (updateError) {
+      status.textContent = "Error updating: " + updateError.message;
+      status.style.color = "var(--red)";
+      btn.disabled = false;
+      return;
+    }
+
+    // 4. Success!
+    status.textContent = "Password updated successfully!";
+    status.style.color = "var(--green)";
+    
+    setTimeout(() => {
+      closeChangePasswordModal();
+      toast("Password updated successfully.");
+    }, 1500);
+
+  } catch (err) {
+    status.textContent = "An unexpected error occurred.";
+    status.style.color = "var(--red)";
+    btn.disabled = false;
+  }
+}
+window.submitChangePassword = submitChangePassword;
   window.changePassword = changePassword;
 
   function openNotifySheet(threadId) {
