@@ -559,9 +559,11 @@ your network.</div>
     <button class="hbtn" type="button" onclick="toggleSettingsMenu()" aria-label="Settings">⋮</button>
   </header>
   <div id="settingsMenu" class="card hidden" style="position:absolute;right:10px;top:58px;z-index:25;width:min(340px,calc(100vw - 20px))">
-    <h2 style="margin-top:0">Settings</h2>
-    <button id="closeSettingsButton" class="gray" type="button">Close</button>
-    <h3>Notifications</h3>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h2 style="margin:0;">Settings</h2>
+    <button id="closeSettingsButton" class="gray" type="button" style="min-height:32px; min-width:32px; padding:4px; font-size:16px; border-radius:50%; display:grid; place-items:center;" aria-label="Close settings">✕</button>
+  </div>
+  <h3>Notifications</h3>
     <div style="display:flex;gap:8px;margin:8px 0">
       <button id="builtInSoundChoice" class="btn" type="button">Built-in sounds</button>
       <button id="customSoundChoice" class="gray" type="button">Custom ringtone</button>
