@@ -566,9 +566,8 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
         <div class="tile clickable" onclick="go('sites')"><span class="ic">📍</span>Sites</div>
         <div class="tile clickable" onclick="go('dtr')"><span class="ic">⏰</span>DTR</div>
         <div class="tile clickable" onclick="go('notes')"><span class="ic">📌</span>Notes &amp; Recs</div>
-        <div class="tile clickable admin-only hidden" onclick="go('admin')"><span class="ic">⚙️</span>Admin</div>
         <div class="tile clickable" onclick="go('profile')"><span class="ic">👤</span>Profile</div>
-        <div class="tile clickable" onclick="go('leave')"><span class="ic">🌴</span>Leave</div>
+<div class="tile clickable" onclick="go('leave')"><span class="ic">🌴</span>Leave</div>
       </div>
     </div></section>
 
@@ -1062,16 +1061,17 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
     { text: "Trust in the Lord with all your heart.", reference: "Proverbs 3:5" }
   ];
   function showDailyVerse() {
-    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-    if (localStorage.getItem("eesi-daily-verse-date") === today) return;
-    const start = new Date(new Date().getFullYear(), 0, 1);
-    const day = Math.floor((new Date() - start) / 86400000);
-    const verse = DAILY_VERSES[day % DAILY_VERSES.length];
-    $("dailyVerseText").textContent = verse.text;
-    $("dailyVerseReference").textContent = verse.reference;
-    $("dailyVerseOverlay").classList.remove("hidden");
-    localStorage.setItem("eesi-daily-verse-date", today);
-  }
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const key = "eesi-daily-verse-date:" + (state.userId || "anon");
+  if (localStorage.getItem(key) === today) return;
+  const start = new Date(new Date().getFullYear(), 0, 1);
+  const day = Math.floor((new Date() - start) / 86400000);
+  const verse = DAILY_VERSES[day % DAILY_VERSES.length];
+  $("dailyVerseText").textContent = verse.text;
+  $("dailyVerseReference").textContent = verse.reference;
+  $("dailyVerseOverlay").classList.remove("hidden");
+  localStorage.setItem(key, today);
+}
   $("closeDailyVerseButton").addEventListener("click", () => {
     $("dailyVerseOverlay").classList.add("hidden");
   });
