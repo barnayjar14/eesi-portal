@@ -411,6 +411,39 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
 }
 .msg-context-btn:last-child { border-bottom: 0; }
 .msg-context-btn:active { background: var(--border); }
+
+/* Message Reaction Overlay */
+.msgr-row { margin-bottom: 14px; } /* Gives space for the floating emoji */
+.msgr-bub { position: relative; }
+
+.msg-reaction-badge {
+  position: absolute;
+  bottom: -12px;
+  right: 8px; /* Default for your own messages (bottom right) */
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1px 6px;
+  font-size: 13px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* Position on the left for received messages */
+.msgr-row:not(.mine) .msg-reaction-badge {
+  right: auto;
+  left: 8px; 
+}
+
+/* Dark mode support for the badge */
+body.dark .msg-reaction-badge {
+  background: var(--navy);
+  border-color: #334155;
+}
 </style>
 
 </head>
@@ -2486,8 +2519,8 @@ async function loadAnnouncements() {
 
 async function loadMessages(threadId) {
   const { data, error } = await client.from("messages")
-  .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned")
-    .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
+.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji)")
+  .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
   if (state.activeThread !== threadId) return;   // ← race guard
   if (error) { toast("Could not load messages: " + error.message); return; }
   state.messages = data || [];
@@ -3339,11 +3372,28 @@ function renderDtrSiteOptions() {
             : '<a href="' + esc(attachUrl) + '" target="_blank" rel="noopener">📎 ' + esc(m.attachment_name || "Attachment") + '</a>')
         : "";
       const pinIcon = m.is_pinned ? ' 📌' : '';
+
+// NEW: Calculate and build the reaction overlay
+let reactionHtml = "";
+if (m.message_reactions && m.message_reactions.length > 0) {
+  // Group same emojis together (e.g., if 2 people "like" it, show "👍2")
+  const counts = {};
+  m.message_reactions.forEach(r => {
+    counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+  });
+  const reactionStr = Object.entries(counts)
+    .map(([emoji, count]) => emoji + (count > 1 ? count : ""))
+    .join(" ");
+    
+  reactionHtml = '<div class="msg-reaction-badge">' + reactionStr + '</div>';
+}
+
 return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
   (mine ? "" : face(profileOf(m.user_id))) +
   '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-text="' + esc(m.body || "") + '">' +
     '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + pinIcon + attach +
     '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
+    reactionHtml + // <-- Add the overlay here
   '</div></div>';
     }).join("");
     const box = $("messages");
