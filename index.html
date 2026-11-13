@@ -2305,7 +2305,7 @@ async function loadApprovalNotifications() {
   }
   async function loadDtrs() {
     const { data, error } = await client.from("dtr_entries")
-      .select("id,user_id,work_date,location,job,time_in,time_out")
+      .select("id,user_id,work_date,location,job,time_in,time_out,overtime_approved")
       .order("work_date", { ascending: false });
     if (error) return setupError("Could not load DTR", error);
     state.dtrs = data || [];
@@ -2354,17 +2354,17 @@ async function loadAnnouncements() {
     vibrateForNotification();
     toast("📢 New Announcement: " + newAnnouncements[0].title);
     
+    showBackgroundNotification(
+  "📢 New Announcement", 
+  newAnnouncements[0].title + ": " + newAnnouncements[0].body, 
+  [300, 100, 300, 100, 300]
+);
     // Instantly reset the ticker to show the new announcement first
     tickerIndex = 0; 
     if (typeof updateAnnouncementTicker === "function") {
       updateAnnouncementTicker(); 
     }
   }
-  showBackgroundNotification(
-  "📢 New Announcement", 
-  newAnnouncements[0].title + ": " + newAnnouncements[0].body, 
-  [300, 100, 300, 100, 300]
-);
 }
   async function loadPending() {
     if (!isManager()) { state.pending = []; renderPending(); return; }
@@ -3599,6 +3599,7 @@ async function addSite() {
     // Set min dates to today for scheduling and leave
 const todayStr = new Date().toISOString().slice(0, 10);
 $("schDate").min = todayStr;
+
 $("leaveStart").min = todayStr;
 $("leaveEnd").min = todayStr;
 $("reportDate").min = todayStr;
@@ -5467,6 +5468,12 @@ if (!Object.keys(state.roles).length) await loadRoles();
 
   $("dtrDate").value = new Date().toISOString().slice(0, 10);
   $("schDate").value = new Date().toISOString().slice(0, 10);
+  // Set global min dates to today
+const todayStrInit = new Date().toISOString().slice(0, 10);
+if($("schDate")) $("schDate").min = todayStrInit;
+if($("leaveStart")) $("leaveStart").min = todayStrInit;
+if($("leaveEnd")) $("leaveEnd").min = todayStrInit;
+if($("reportDate")) $("reportDate").min = todayStrInit;
   const savedTheme = localStorage.getItem("eesi-theme") || "system";
   $("settingTheme").value = savedTheme;
   applyTheme(savedTheme);
