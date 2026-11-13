@@ -2766,7 +2766,7 @@ async function handleIncomingMessage() {
   let activeIncoming = [];
   if (thread) {
     const { data, error } = await client.from("messages")
-      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,edited_at,reply_to_id,message_reactions(emoji)")
       .eq("thread_id", thread)
       .order("created_at", { ascending: true })
       .limit(300);
@@ -3734,15 +3734,15 @@ async function sendMessage(text, file) {
   // 1. OPTIMISTIC UI: Show message instantly before DB saves
   const tempId = "temp-" + Date.now();
   const tempMsg = {
-    id: tempId,
-    thread_id: state.activeThread,
-    user_id: state.userId,
-    sender_name: state.profile?.full_name || state.email,
-    body: text || (file ? "Uploading attachment..." : ""),
-    created_at: new Date().toISOString(),
-    isOptimistic: true
-    reply_to_id: replyingToMsg ? Number(replyingToMsg.id) : null,
-  };
+  id: tempId,
+  thread_id: state.activeThread,
+  user_id: state.userId,
+  sender_name: state.profile?.full_name || state.email,
+  body: text || (file ? "Uploading attachment..." : ""),
+  created_at: new Date().toISOString(),
+  isOptimistic: true,
+  reply_to_id: replyingToMsg ? Number(replyingToMsg.id) : null,
+};
 
   state.messages.push(tempMsg);
   renderMessages(); // Instantly draw it on screen
