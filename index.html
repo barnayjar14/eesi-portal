@@ -2473,24 +2473,48 @@ async function handleIncomingMessage() {
     renderChatList(); renderLeave();
   }
 
-  let tickerIndex = 0;
-  let tickerTimer = null;
-  function updateAnnouncementTicker() {
-    const text = $("tickerText");
-    const announcements = state.announcements || [];
-    clearTimeout(tickerTimer);
-    text.style.animation = "none";
-    if (!announcements.length) { tickerIndex = 0; text.textContent = "📢 No announcements yet"; return; }
-    tickerIndex = tickerIndex % announcements.length;
-    const item = announcements[tickerIndex];
-    text.textContent = "📢 " + item.title + ": " + item.body;
-    void text.offsetWidth;
-    text.style.animation = "marquee 30s linear 1";
-    tickerTimer = setTimeout(() => {
-      tickerIndex = (tickerIndex + 1) % announcements.length;
-      updateAnnouncementTicker();
-    }, 30000);
+  const SYSTEM_ANNOUNCEMENTS = [
+  { title: "EESI ELEVATORS INC.", body: "REMINDERS: BE HONEST ALL THE TIME." },
+  { title: "SAFETY FIRST", body: "ALWAYS WEAR YOUR PPE AND FOLLOW SAFETY PROTOCOLS." },
+  { title: "CORE VALUE", body: "INTEGRITY AND EXCELLENCE IN EVERY JOB." }
+];
+
+let tickerIndex = 0;
+let tickerTimer = null;
+
+function updateAnnouncementTicker() {
+  const text = $("tickerText");
+  const dbAnnouncements = state.announcements || [];
+  
+  // Combine your hardcoded system reminders with the admin's announcements
+  const allAnnouncements = [...SYSTEM_ANNOUNCEMENTS, ...dbAnnouncements];
+  
+  clearTimeout(tickerTimer);
+  text.style.animation = "none";
+  
+  if (!allAnnouncements.length) { 
+    tickerIndex = 0; 
+    text.textContent = "📢 Welcome to EESI Elevators"; 
+    return; 
   }
+  
+  tickerIndex = tickerIndex % allAnnouncements.length;
+  const item = allAnnouncements[tickerIndex];
+  
+  text.textContent = "📢 " + item.title + " — " + item.body;
+  
+  // Reset and trigger the animation
+  void text.offsetWidth;
+  
+  // Set animation to exactly 1 minute (60s)
+  text.style.animation = "marquee 60s linear 1";
+  
+  // Switch to the next announcement exactly every 1 minute (60,000ms)
+  tickerTimer = setTimeout(() => {
+    tickerIndex = (tickerIndex + 1) % allAnnouncements.length;
+    updateAnnouncementTicker();
+  }, 60000);
+}
 
   function renderHome() {
     if (!state.userId) return;
