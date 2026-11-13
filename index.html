@@ -775,7 +775,7 @@ your network.</div>
       <div id="dtrFill">
         <div class="card">
           <div class="field"><label for="dtrDate">Date</label><input id="dtrDate" type="date"></div>
-          <div class="field"><label for="dtrLocation">Work location</label><input id="dtrLocation"></div>
+          <div class="field"><label for="dtrLocation">Work location</label><select id="dtrLocation"><option value="">Select a site</option></select></div>
           <div class="field"><label for="dtrJob">Work description</label><input id="dtrJob"></div>
           <div class="row">
             <div class="field"><label for="dtrIn">Time in</label><input id="dtrIn" type="time"></div>
@@ -2111,6 +2111,7 @@ window.refreshLeaveBalances = function () {
     if (error) return setupError("Could not load sites", error);
     state.sites = data || [];
     renderSites();
+    renderDtrSiteOptions(); // <-- ADD THIS LINE
     renderPmsSiteOptions();
     renderPmsChecklist();
     renderReportSites();
@@ -2869,6 +2870,19 @@ function updateAnnouncementTicker() {
         ).join("") + '</div>'
     ).join("") || '<p class="muted">No sites yet.</p>';
   }
+
+function renderDtrSiteOptions() {
+  const select = $("dtrLocation");
+  if (!select) return;
+  
+  const current = select.value;
+  select.innerHTML = '<option value="">Select a site</option>' +
+    state.sites.map(site => '<option value="' + esc(site.name) + '">' +
+      esc(site.name) + ' (' + esc(site.city) + ')' +
+    '</option>').join("");
+    
+  if (state.sites.some(s => s.name === current)) select.value = current;
+}
 
   function renderReportSites() {
     const select = $("reportSite");
