@@ -18,7 +18,7 @@ body.compact .item { padding: 9px; margin-bottom: 8px; }
 body.compact .person { padding: 7px; margin: 4px 0; }
 #pmsRecordOverlay:not(.hidden) { position: fixed; inset: 0; z-index: 55; overflow-y: auto; background: var(--bg); padding: 16px; }
 #pmsRecordOverlay > .card { max-width: 800px; margin: 0 auto; }
-.report-tabs-row { display: flex; align-items: flex-start; gap: 8px; }
+.report-tabs-row { display: flex; align-items: flex-start; gap: 8px; position: relative; }
 .report-tabs-row .tabs { flex: 1; min-width: 0; }
 .report-tabs-row #reportFilterMenuButton { flex: 0 0 auto; }
 :root{--blue:#1a56a0;--navy:#16233a;--red:#b93025;--green:#059669;--amber:#d97706;--bg:#eef2f7;--card:#fff;--border:#d5dbe3;--text:#1f2937;--muted:#6b7280}
@@ -270,7 +270,7 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
 .report-toolbar{display:flex;align-items:center;gap:10px;position:relative;}
 #reportFilterMenuButton{margin-left:auto;flex:0 0 auto;}
 .report-toolbar .title{margin-bottom:14px;}
-.report-filter-menu{position:absolute;top:58px;right:16px;z-index:20;width:min(360px,calc(100vw - 32px));}
+.report-filter-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;width:min(360px,calc(100vw - 32px));}
 .report-filter-menu .card{margin-top:0;box-shadow:0 8px 24px #0003;}
 .ticker span{animation-fill-mode:forwards;}
 .ticker span.finished{display:none;}
@@ -627,35 +627,34 @@ body:has(#page-home:not(.hidden)) header{display:none!important;}
 
     <section class="page hidden" id="page-reports">
       <div class="ct">
-        <h1 class="title">📄 Reports</h1>
-        <div id="reportFilterMenu" class="report-filter-menu hidden">
-          <div class="card">
-            <div class="field"><label for="filterReportDate">Report date</label><input id="filterReportDate" type="date"></div>
-            <div class="field">
-              <label for="filterReportRegion">Region</label>
-              <select id="filterReportRegion">
-                <option value="">All regions</option>
-                <option value="Luzon">Luzon</option>
-                <option value="Visayas">Visayas</option>
-                <option value="Mindanao">Mindanao</option>
-              </select>
-            </div>
-            <div class="field"><label for="filterReportArea">Area / city</label><select id="filterReportArea"><option value="">All areas</option></select></div>
-            <div class="field"><label for="filterReportSite">Site</label><select id="filterReportSite"><option value="">All sites</option></select></div>
-            <button class="gray" type="button" id="clearReportFilters">Clear filters</button>
-            <button class="gray" type="button" id="closeReportFilters">Close</button>
-          </div>
-        </div>
-
         <div class="report-tabs-row">
-          <div class="tabs" id="reportTypeTabs">
-            <button class="tab active" type="button" data-report-type="service">Services Report</button>
-            <button class="tab" type="button" data-report-type="delivery">Delivery Report</button>
-            <button class="tab" type="button" data-report-type="checklist">PMS Checklist</button>
-            <button class="tab" type="button" id="pmsRecordsTab">PMS Records</button>
-          </div>
-          <button id="reportFilterMenuButton" class="gray" type="button" aria-label="Open report filters" aria-expanded="false">⋮</button>
-        </div>
+  <div class="tabs" id="reportTypeTabs">
+    <button class="tab active" type="button" data-report-type="service">Services Report</button>
+    <button class="tab" type="button" data-report-type="delivery">Delivery Report</button>
+    <button class="tab" type="button" data-report-type="checklist">PMS Checklist</button>
+    <button class="tab" type="button" id="pmsRecordsTab">PMS Records</button>
+  </div>
+  <button id="reportFilterMenuButton" class="gray" type="button"
+          aria-label="Open report filters" aria-expanded="false">⋮</button>
+  <div id="reportFilterMenu" class="report-filter-menu hidden">
+    <div class="card">
+      <div class="field"><label for="filterReportDate">Report date</label><input id="filterReportDate" type="date"></div>
+      <div class="field">
+        <label for="filterReportRegion">Region</label>
+        <select id="filterReportRegion">
+          <option value="">All regions</option>
+          <option value="Luzon">Luzon</option>
+          <option value="Visayas">Visayas</option>
+          <option value="Mindanao">Mindanao</option>
+        </select>
+      </div>
+      <div class="field"><label for="filterReportArea">Area / city</label><select id="filterReportArea"><option value="">All areas</option></select></div>
+      <div class="field"><label for="filterReportSite">Site</label><select id="filterReportSite"><option value="">All sites</option></select></div>
+      <button class="gray" type="button" id="clearReportFilters">Clear filters</button>
+      <button class="gray" type="button" id="closeReportFilters">Close</button>
+    </div>
+  </div>
+</div>
 
         <div id="pmsReportContent" class="hidden">
           <div class="ct">
