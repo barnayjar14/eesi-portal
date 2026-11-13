@@ -366,7 +366,53 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
   from { transform: translateY(-100%); }
   to { transform: translateY(0); }
 }
+/* Floating Message Context Menu */
+#messageContextMenu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dialogPop 0.15s ease-out;
+  width: 160px;
+}
+#messageContextMenu.hidden { display: none; }
+.msg-reactions {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.msg-reactions span {
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  transition: transform 0.1s;
+}
+.msg-reactions span:active { transform: scale(1.4); }
+.msg-context-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.msg-context-btn:last-child { border-bottom: 0; }
+.msg-context-btn:active { background: var(--border); }
 </style>
+
 </head>
 <body>
 <div id="offlineBanner" class="hidden">⚠️ No Internet Connection. Please check
@@ -1060,6 +1106,20 @@ your network.</div>
   <div class="sheet" data-act="noop"><div id="sheetBody"></div></div>
 </div>
 <div id="toastBox" class="toast hidden" role="status"></div>
+<div id="messageContextMenu" class="hidden">
+  <div class="msg-reactions">
+    <span data-react="👍">👍</span>
+    <span data-react="❤️">❤️</span>
+    <span data-react="😂">😂</span>
+    <span data-react="😮">😮</span>
+    <span data-react="😢">😢</span>
+    <span data-react="🙏">🙏</span>
+  </div>
+  <button class="msg-context-btn" data-msg-act="copy">📋 Copy</button>
+  <button class="msg-context-btn" data-msg-act="forward">↪️ Forward</button>
+  <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
+  <button class="msg-context-btn hidden" data-msg-act="delete" id="ctxDeleteBtn" style="color:var(--red);">🗑 Delete</button>
+</div>
 <div id="addSiteOverlay" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="addSiteTitle">
   <div class="card">
     <h2 id="addSiteTitle">Add site</h2>
@@ -2426,7 +2486,7 @@ async function loadAnnouncements() {
 
 async function loadMessages(threadId) {
   const { data, error } = await client.from("messages")
-    .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at")
+  .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned")
     .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
   if (state.activeThread !== threadId) return;   // ← race guard
   if (error) { toast("Could not load messages: " + error.message); return; }
@@ -3274,12 +3334,13 @@ function renderDtrSiteOptions() {
             ? '<img class="chat-img" src="' + esc(attachUrl) + '" alt="' + esc(m.attachment_name || "attachment") + '">'
             : '<a href="' + esc(attachUrl) + '" target="_blank" rel="noopener">📎 ' + esc(m.attachment_name || "Attachment") + '</a>')
         : "";
-      return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
-        (mine ? "" : face(profileOf(m.user_id))) +
-        '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '">' +
-          (m.body ? esc(m.body) : "") + attach +
-          '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
-        '</div></div>';
+      const pinIcon = m.is_pinned ? ' 📌' : '';
+return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
+  (mine ? "" : face(profileOf(m.user_id))) +
+  '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-text="' + esc(m.body || "") + '">' +
+    '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + pinIcon + attach +
+    '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
+  '</div></div>';
     }).join("");
     const box = $("messages");
     box.innerHTML = rows || (q
@@ -3488,27 +3549,111 @@ function renderDtrSiteOptions() {
   $("chatSearch").addEventListener("input", renderChatList);
   $("messageSearch").addEventListener("input", renderMessages);
 
-  let messageHoldTimer, messageHoldTarget;
-  $("messages").addEventListener("pointerdown", event => {
-    const bubble = event.target.closest(".msgr-bub[data-own-message='1']");
-    if (!bubble) return;
-    messageHoldTarget = bubble;
-    messageHoldTimer = setTimeout(async () => {
-      const messageId = messageHoldTarget?.dataset.messageId;
-      if (!messageId || !confirm("Delete this message for everyone?")) return;
-      const { data, error } = await client.rpc("delete_my_message", { p_message_id: Number(messageId) });
-      if (error) return toast("Could not delete message: " + error.message);
-      if (!data) return toast("Message could not be deleted.");
-      await loadMessages(state.activeThread);
-    }, 650);
-  });
-  ["pointerup", "pointercancel", "pointerleave"].forEach(type => {
-    $("messages").addEventListener(type, () => {
-      clearTimeout(messageHoldTimer);
-      messageHoldTarget = null;
-    });
-  });
+  let msgPressTimer = null;
+let activeMsgContext = null;
 
+$("messages").addEventListener("pointerdown", event => {
+  const bubble = event.target.closest(".msgr-bub");
+  if (!bubble || event.target.tagName === 'A' || event.target.tagName === 'IMG') return;
+
+  clearTimeout(msgPressTimer);
+  msgPressTimer = setTimeout(() => {
+    const rect = bubble.getBoundingClientRect();
+    const msgId = bubble.dataset.messageId;
+    const isOwn = bubble.dataset.ownMessage === "1";
+    const text = bubble.dataset.text || "";
+
+    if (!msgId) return;
+    activeMsgContext = { id: msgId, isOwn, text };
+
+    const menu = $("messageContextMenu");
+    menu.classList.remove("hidden");
+    
+    // Position menu beside the bubble
+    let top = rect.top;
+    let left = isOwn ? rect.left - 170 : rect.right + 10;
+
+    // Keep in screen bounds
+    if (left < 10) left = 10;
+    if (left + 160 > window.innerWidth) left = window.innerWidth - 170;
+    if (top + 250 > window.innerHeight) top = window.innerHeight - 260;
+
+    menu.style.top = Math.max(10, top) + "px";
+    menu.style.left = left + "px";
+
+    $("ctxDeleteBtn").classList.toggle("hidden", !isOwn);
+    if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
+
+  }, 500); // 500ms hold
+});
+
+["pointerup", "pointermove", "pointercancel", "pointerleave"].forEach(ev => {
+  $("messages").addEventListener(ev, () => clearTimeout(msgPressTimer));
+});
+
+// Handle Menu Actions
+document.addEventListener("click", async e => {
+  const menu = $("messageContextMenu");
+  if (menu.classList.contains("hidden")) return;
+
+  if (!menu.contains(e.target) && !e.target.closest(".msgr-bub")) {
+    menu.classList.add("hidden");
+    activeMsgContext = null;
+    return;
+  }
+
+  // Emoji React
+  const reactSpan = e.target.closest("[data-react]");
+  if (reactSpan) {
+    menu.classList.add("hidden");
+    const emoji = reactSpan.dataset.react;
+    if (!activeMsgContext) return;
+    
+    const { error } = await client.rpc("react_to_message", { 
+      p_message_id: Number(activeMsgContext.id), p_emoji: emoji 
+    });
+    if (error) return toast("Could not react: " + error.message);
+    toast("Reacted " + emoji);
+    await loadMessages(state.activeThread);
+    activeMsgContext = null;
+    return;
+  }
+
+  // Action Buttons
+  const actBtn = e.target.closest("[data-msg-act]");
+  if (actBtn) {
+    menu.classList.add("hidden");
+    const act = actBtn.dataset.msgAct;
+    if (!activeMsgContext) return;
+
+    if (act === "copy") {
+      navigator.clipboard.writeText(activeMsgContext.text);
+      toast("Message copied!");
+    } 
+    else if (act === "forward") {
+      if (navigator.share) {
+        navigator.share({ text: activeMsgContext.text }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(activeMsgContext.text);
+        toast("Message copied (ready to forward)");
+      }
+    }
+    else if (act === "pin") {
+      const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
+      if (error) return toast("Could not pin: " + error.message);
+      toast("Message pin toggled!");
+      await loadMessages(state.activeThread);
+    }
+    else if (act === "delete") {
+      if (confirm("Delete this message for everyone?")) {
+        const { data, error } = await client.rpc("delete_my_message", { p_message_id: Number(activeMsgContext.id) });
+        if (error) return toast("Could not delete: " + error.message);
+        await loadMessages(state.activeThread);
+      }
+    }
+    activeMsgContext = null;
+  }
+});
   /* ---------------- actions ---------------- */
   async function postAnnouncement() {
   if (!checkNetwork()) return;
