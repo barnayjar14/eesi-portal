@@ -3457,8 +3457,7 @@ function renderMessages() {
           : '<a href="' + esc(attachUrl) + '" target="_blank" rel="noopener">📎 ' + esc(m.attachment_name || "Attachment") + '</a>')
       : "";
     const pinIcon = m.is_pinned ? ' 📌' : '';
-    const editedLabel = m.edited_at ? ' <span style="font-size:10px;
-    opacity:0.7;">(edited)</span>' : '';
+    const editedLabel = m.edited_at ? ' <span style="font-size:10px; opacity:0.7;">(edited)</span>' : '';
     
     // 2. REACTION OVERLAY
     let reactionHtml = "";
