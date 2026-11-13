@@ -369,7 +369,6 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
 </style>
 </head>
 <body>
-  <body>
 <div id="offlineBanner" class="hidden">⚠️ No Internet Connection. Please check
 your network.</div>
 <!-- EESI logo (single source) -->
@@ -4690,7 +4689,6 @@ function getActiveSignatureSrc() {
     else if (act === "del-note") deleteRow("notes", id, loadNotes);
     else if (act === "del-rec") deleteRow("recommendations", id, loadRecs);
     else if (act === "del-ann") deleteRow("announcements", id, loadAnnouncements);
-    else if (act === "del-ann") deleteRow("announcements", id, loadAnnouncements);
 else if (act === "view-ann") viewAnnouncement(id);
 else if (act === "edit-ann") editAnnouncement(id);
     else if (act === "approve") approveRequest(id);
@@ -4758,7 +4756,7 @@ toast("Report deleted.");
     });
   });
 
-  $("$("submitReportButton").addEventListener("click", async () => {
+  $("submitReportButton").addEventListener("click", async () => {
   if (!checkNetwork()) return;
   const siteId = Number($("reportSite").value);
     const reportDate = $("reportDate").value;
