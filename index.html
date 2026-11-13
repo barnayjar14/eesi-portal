@@ -3489,7 +3489,6 @@ function renderMessages() {
   const rows = filteredMessages.map(m => {
     const mine = m.user_id === state.userId;
     
-    // 1. DELETED MESSAGES
     if (m.deleted_at) {
       return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
         (mine ? "" : face(profileOf(m.user_id))) +
@@ -3506,20 +3505,14 @@ function renderMessages() {
     const pinIcon = m.is_pinned ? ' 📌' : '';
     const editedLabel = m.edited_at ? ' <span style="font-size:10px; opacity:0.7;">(edited)</span>' : '';
     
-    // 2. REACTION OVERLAY
     let reactionHtml = "";
     if (m.message_reactions && m.message_reactions.length > 0) {
       const counts = {};
-      m.message_reactions.forEach(r => {
-        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
-      });
-      const reactionStr = Object.entries(counts)
-        .map(([emoji, count]) => emoji + (count > 1 ? count : ""))
-        .join(" ");
+      m.message_reactions.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+      const reactionStr = Object.entries(counts).map(([emoji, count]) => emoji + (count > 1 ? count : "")).join(" ");
       reactionHtml = '<div class="msg-reaction-badge">' + reactionStr + '</div>';
     }
 
-    // 3. READ RECEIPTS
     let readReceiptHtml = "";
     const currentThread = state.threads.find(x => x.id === state.activeThread);
     if (currentThread && mine && m.id === state.messages[state.messages.length - 1].id) { 
@@ -3535,23 +3528,19 @@ function renderMessages() {
            const img = safeUrl(p?.avatar_url) ? '<img class="read-receipt-avatar" src="' + esc(safeUrl(p?.avatar_url)) + '">' : '<span class="read-receipt-avatar">' + initial + '</span>';
            return '<span class="tap" data-act="view-profile" data-id="' + esc(mem.user_id) + '" title="' + esc(name) + '">' + img + '</span>';
         }).join("");
-        
         const names = membersWhoRead.map(mem => profileOf(mem.user_id)?.full_name?.split(" ")[0] || "Member").join(", ");
         
         readReceiptHtml = '<div style="display:flex; justify-content:flex-end; align-items:center; gap:6px; margin-top:6px; font-size:11px; color:var(--muted);">' +
-          '<span>Seen by ' + esc(names) + '</span>' +
-          '<span style="display:flex;">' + faces + '</span>' +
-        '</div>';
+          '<span>Seen by ' + esc(names) + '</span><span style="display:flex;">' + faces + '</span></div>';
       }
     }
 
-    // 4. REPLY HEADER LOGIC
+    // REPLY HEADER
     let replyHeaderHtml = "";
     if (m.reply_to_id) {
-      const original = state.messages.find(x => x.id === m.reply_to_id);
+      const original = state.messages.find(x => String(x.id) === String(m.reply_to_id));
       if (original) {
         const origSender = original.user_id === state.userId ? "you" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "someone");
-        
         let headerText = "";
         if (mine) {
           headerText = `You replied to ${origSender}`;
@@ -3559,14 +3548,13 @@ function renderMessages() {
           const replySender = profileOf(m.user_id)?.full_name?.split(" ")[0] || "Someone";
           headerText = `${replySender} replied to ${origSender}`;
         }
-        
         replyHeaderHtml = '<div class="reply-header">↪ ' + esc(headerText) + '</div>';
       } else {
         replyHeaderHtml = '<div class="reply-header">↪ Replying to a deleted message</div>';
       }
     }
 
-    // 5. NORMAL MESSAGE OUTPUT (With wrapper for header)
+    // MESSAGE OUTPUT
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
       '<div style="display:flex; flex-direction:column; align-items:' + (mine ? 'flex-end' : 'flex-start') + '; max-width:76%;">' +
@@ -3753,6 +3741,7 @@ async function sendMessage(text, file) {
     body: text || (file ? "Uploading attachment..." : ""),
     created_at: new Date().toISOString(),
     isOptimistic: true
+    reply_to_id: replyingToMsg ? Number(replyingToMsg.id) : null,
   };
 
   state.messages.push(tempMsg);
