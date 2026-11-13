@@ -2986,7 +2986,10 @@ function renderDtrSiteOptions() {
   }
 
  function renderDtr() {
-  const rows = isManager() ? state.dtrs : dtrOwn();
+  const rawRows = isManager() ? state.dtrs : dtrOwn();
+  // Sort by date ascending (oldest to newest)
+  const rows = rawRows.slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+  
   $("dtrRows").innerHTML = rows.map(r => {
     const mine = r.user_id === state.userId;
     
@@ -3026,6 +3029,7 @@ function renderDtrSiteOptions() {
 
   function renderDtrPaper() {
   const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+  // ... rest of the function
   const body = rows.map(r =>
     '<tr><td>' + esc(dtrSheetDate(r.work_date)) + '</td><td>' + esc(String(r.location || "").toUpperCase()) + '</td>' +
     '<td>' + esc(String(r.job || "").toUpperCase()) + '</td><td>' + esc(time12(r.time_in) + " - " + time12(r.time_out)) + '</td><td></td></tr>'
