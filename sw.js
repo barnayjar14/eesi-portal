@@ -24,3 +24,22 @@ self.addEventListener("fetch", (event) => {
     fetch(req).catch(() => caches.match(OFFLINE_URL))
   );
 });
+// Handle notification clicks
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close(); // Close the notification
+
+  // Focus the app if it's already open, otherwise open it
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url.includes('index.html') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('./index.html');
+      }
+    })
+  );
+});
