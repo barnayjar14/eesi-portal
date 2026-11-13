@@ -587,10 +587,13 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
     <section class="page hidden" id="page-announcements"><div class="ct">
       <h1 class="title">📢 Announcements</h1>
       <div class="card manager-only hidden">
-        <div class="field"><label for="annTitle">Title</label><input id="annTitle" maxlength="120"></div>
-        <div class="field"><label for="annBody">Message</label><textarea id="annBody"></textarea></div>
-        <button class="btn" type="button" onclick="postAnnouncement()">Post announcement</button>
-      </div>
+  <div class="field"><label for="annTitle">Title</label><input id="annTitle" maxlength="120"></div>
+  <div class="field"><label for="annBody">Message</label><textarea id="annBody"></textarea></div>
+  <div class="inline-actions">
+    <button id="postAnnouncementBtn" class="btn" type="button" onclick="postAnnouncement()">Post announcement</button>
+    <button id="cancelAnnouncementBtn" class="red hidden" type="button" onclick="cancelEditAnnouncement()">Cancel Edit</button>
+  </div>
+</div>
       <div id="annList"></div>
     </div></section>
 
@@ -1156,7 +1159,8 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
     reports: [], reportType: "service",
     regionFilter: "all", setupIssue: "", booted: false
   };
-  let editingReportId = null;
+  let editingReportId = null; 
+  let editingAnnouncementId = null; // <-- ADD THIS LINE
   let authRun = 0;
   
 /* Suppress notification sounds for our own actions (submit report, approve member, etc.) */
@@ -2650,14 +2654,23 @@ function updateAnnouncementTicker() {
   }
 
   function renderAnnouncements() {
-    $("annList").innerHTML = state.announcements.map(a => (
-      '<div class="item"><b>📢 ' + esc(a.title) + '</b>' +
-      '<div class="muted">' + esc(fmtDate(a.created_at)) + ' · ' + esc(a.author_name || "Admin") + '</div>' +
-      '<div style="white-space:pre-wrap">' + esc(a.body) + '</div>' +
-      (isManager() ? '<div class="inline-actions"><button class="red small-btn" type="button" data-act="del-ann" data-id="' + esc(a.id) + '">Delete</button></div>' : '') +
-      '</div>'
-    )).join("") || '<p class="muted">No announcements yet.</p>';
-  }
+  // state.announcements is already sorted by date (newest first) from the database query
+  $("annList").innerHTML = state.announcements.map(a => (
+    '<div class="item clickable" data-act="view-ann" data-id="' + esc(a.id) + '">' +
+      '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+        '<b style="font-size:16px; color:var(--blue);">📢 ' + esc(a.title) + '</b>' +
+      '</div>' +
+      '<div class="muted" style="margin-bottom:6px;">' + esc(fmtDate(a.created_at)) + ' · ' + esc(a.author_name || "Admin") + '</div>' +
+      '<div style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:14px; margin-bottom:6px;">' + esc(a.body) + '</div>' +
+      (isManager() ? 
+        '<div class="inline-actions" onclick="event.stopPropagation();">' +
+          '<button class="btn small-btn" type="button" data-act="edit-ann" data-id="' + esc(a.id) + '">Edit</button>' +
+          '<button class="red small-btn" type="button" data-act="del-ann" data-id="' + esc(a.id) + '">Delete</button>' +
+        '</div>' 
+      : '') +
+    '</div>'
+  )).join("") || '<p class="muted">No announcements yet.</p>';
+}
 
   function renderAssigneesPicker() {
     const box = $("assigneesPicker");
@@ -3308,17 +3321,32 @@ function updateAnnouncementTicker() {
   const title = $("annTitle").value.trim();
   const body = $("annBody").value.trim();
   if (!title || !body) return toast("Enter a title and message");
-  
-  suppressNotifications(); // Mute the chime for the person posting it
-  
-  const { error } = await client.from("announcements").insert({
-    title, body, author_id: state.userId, author_name: state.profile?.full_name || state.email
-  });
-  if (error) return toast("Could not post: " + error.message);
-  
-  $("annTitle").value = ""; $("annBody").value = "";
+
+  suppressNotifications(); // Don't play sound for our own action
+  let error;
+
+  if (editingAnnouncementId) {
+    // Update existing
+    const { error: updateError } = await client.from("announcements").update({
+      title, body, updated_at: new Date().toISOString()
+    }).eq("id", editingAnnouncementId);
+    error = updateError;
+    if (!error) toast("Announcement updated!");
+    cancelEditAnnouncement(); // Reset form
+  } else {
+    // Insert new
+    const { error: insertError } = await client.from("announcements").insert({
+      title, body, author_id: state.userId, author_name: state.profile?.full_name || state.email
+    });
+    error = insertError;
+    if (!error) {
+      $("annTitle").value = ""; $("annBody").value = "";
+      toast("Announcement posted successfully");
+    }
+  }
+
+  if (error) return toast("Could not save: " + error.message);
   await loadAnnouncements();
-  toast("Announcement posted successfully");
 }
   window.postAnnouncement = postAnnouncement;
 
@@ -3445,7 +3473,45 @@ function updateAnnouncementTicker() {
     $("recsTab").classList.toggle("active", !notes);
   }
   window.switchNoteTab = switchNoteTab;
+function viewAnnouncement(id) {
+  const a = state.announcements.find(item => String(item.id) === String(id));
+  if (!a) return toast("Announcement not found");
+  
+  openSheet(
+    '<div class="info-head">' +
+      '<div class="info-ic" style="font-size:30px;">📢</div>' +
+      '<h2>' + esc(a.title) + '</h2>' +
+      '<p class="muted">' + esc(a.author_name || "Admin") + ' · ' + esc(fmtDate(a.created_at)) + '</p>' +
+    '</div>' +
+    '<div class="sheet-text" style="white-space:pre-wrap; margin:16px 0; padding:16px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">' + esc(a.body) + '</div>' +
+    sheetClose()
+  );
+}
 
+function editAnnouncement(id) {
+  const a = state.announcements.find(item => String(item.id) === String(id));
+  if (!a) return toast("Announcement not found");
+  
+  editingAnnouncementId = a.id;
+  $("annTitle").value = a.title;
+  $("annBody").value = a.body;
+  
+  $("postAnnouncementBtn").textContent = "Save Changes";
+  $("postAnnouncementBtn").classList.replace("btn", "green");
+  $("cancelAnnouncementBtn").classList.remove("hidden");
+  
+  $("annTitle").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function cancelEditAnnouncement() {
+  editingAnnouncementId = null;
+  $("annTitle").value = "";
+  $("annBody").value = "";
+  
+  $("postAnnouncementBtn").textContent = "Post announcement";
+  $("postAnnouncementBtn").classList.replace("green", "btn");
+  $("cancelAnnouncementBtn").classList.add("hidden");
+}
   async function commentRec(id) {
     if (!isManager()) return toast("Managers only");
     const box = $("comment" + id);
@@ -4567,6 +4633,9 @@ function getActiveSignatureSrc() {
     else if (act === "del-note") deleteRow("notes", id, loadNotes);
     else if (act === "del-rec") deleteRow("recommendations", id, loadRecs);
     else if (act === "del-ann") deleteRow("announcements", id, loadAnnouncements);
+    else if (act === "del-ann") deleteRow("announcements", id, loadAnnouncements);
+else if (act === "view-ann") viewAnnouncement(id);
+else if (act === "edit-ann") editAnnouncement(id);
     else if (act === "approve") approveRequest(id);
     else if (act === "decline") declineRequest(id);
     else if (act === "comment-rec") commentRec(id);
