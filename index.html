@@ -412,6 +412,41 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
 .msg-context-btn:last-child { border-bottom: 0; }
 .msg-context-btn:active { background: var(--border); }
 
+/* Reply Quote Box */
+.reply-quote-box {
+  display: block;
+  background: rgba(0, 0, 0, 0.08);
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.reply-quote-box .reply-name {
+  font-weight: bold;
+  color: var(--blue);
+  font-size: 11px;
+  display: block;
+  margin-bottom: 2px;
+}
+.reply-quote-box .reply-text {
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* Adjust colors for your own sent messages */
+.msgr-row.mine .reply-quote-box {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-color: #fff;
+}
+.msgr-row.mine .reply-quote-box .reply-name {
+  color: #fff;
+}
 /* Message Reaction Overlay */
 .msgr-row { margin-bottom: 14px; }
 .msgr-bub { position: relative; }
@@ -3540,12 +3575,12 @@ if (m.reply_to_id) {
   const original = state.messages.find(x => x.id === m.reply_to_id);
   if (original) {
     const origSender = original.user_id === state.userId ? "You" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "Member");
-    replyHtml = '<div style="background: rgba(0,0,0,0.1); border-left: 3px solid ' + (mine ? '#fff' : 'var(--blue)') + '; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; font-size: 13px;">' +
-      '<b style="color: ' + (mine ? '#fff' : 'var(--blue)') + '; font-size: 11px;">' + esc(origSender) + '</b>' +
-      '<div style="opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + esc(original.body || "📷 Photo") + '</div>' +
+    replyHtml = '<div class="reply-quote-box">' +
+      '<span class="reply-name">' + esc(origSender) + '</span>' +
+      '<span class="reply-text">' + esc(original.body || "📷 Photo") + '</span>' +
     '</div>';
   } else {
-    replyHtml = '<div style="font-size:12px; opacity:0.6; font-style:italic; margin-bottom:4px;">Replying to a deleted message</div>';
+    replyHtml = '<div class="reply-quote-box" style="font-style:italic; opacity:0.6;">Replying to a deleted message</div>';
   }
 }
 
@@ -3766,10 +3801,11 @@ async function sendMessage(text, file) {
     state.messages = state.messages.map(m => m.id === tempId ? data : m);
     renderMessages();
     
-    state.previews[state.activeThread] = data;
-    markThreadRead(state.activeThread);
-    
-  } catch (error) {
+      state.previews[state.activeThread] = data;
+  markThreadRead(state.activeThread);
+  cancelReply(); // <-- Add this line here to clear the reply banner after sending
+  
+} catch (error) {
     toast("Could not send: " + error.message);
     // Remove the failed message from UI
     state.messages = state.messages.filter(m => m.id !== tempId);
