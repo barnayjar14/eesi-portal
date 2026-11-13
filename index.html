@@ -2408,12 +2408,11 @@ async function handleIncomingMessage() {
   if (!state.userId) return;
 
   const previousUnread = { ...state.unread };
-const thread = state.activeThread;   // ← captured BEFORE awaits
 
-await loadPreviews();
-await loadThreads();
+  await loadPreviews();
+  await loadThreads();
 
-let activeIncoming = [];
+  let activeIncoming = [];
   const thread = state.activeThread;   // ← capture before awaits
 
   if (thread) {
