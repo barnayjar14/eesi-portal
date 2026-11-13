@@ -412,40 +412,15 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
 .msg-context-btn:last-child { border-bottom: 0; }
 .msg-context-btn:active { background: var(--border); }
 
-/* Reply Quote Box */
-.reply-quote-box {
-  display: block;
-  background: rgba(0, 0, 0, 0.08);
-  border-left: 3px solid var(--blue);
-  border-radius: 4px;
-  padding: 6px 10px;
-  margin-bottom: 6px;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.reply-quote-box .reply-name {
-  font-weight: bold;
-  color: var(--blue);
-  font-size: 11px;
-  display: block;
-  margin-bottom: 2px;
-}
-.reply-quote-box .reply-text {
-  opacity: 0.8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-/* Adjust colors for your own sent messages */
-.msgr-row.mine .reply-quote-box {
-  background: rgba(255, 255, 255, 0.15);
-  border-left-color: #fff;
-}
-.msgr-row.mine .reply-quote-box .reply-name {
-  color: #fff;
+/* New Messenger-style Reply Header */
+.reply-header {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
 }
 /* Message Reaction Overlay */
 .msgr-row { margin-bottom: 14px; }
@@ -3569,28 +3544,38 @@ function renderMessages() {
         '</div>';
       }
     }
-// REPLY LOGIC
-let replyHtml = "";
-if (m.reply_to_id) {
-  const original = state.messages.find(x => x.id === m.reply_to_id);
-  if (original) {
-    const origSender = original.user_id === state.userId ? "You" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "Member");
-    replyHtml = '<div class="reply-quote-box">' +
-      '<span class="reply-name">' + esc(origSender) + '</span>' +
-      '<span class="reply-text">' + esc(original.body || "📷 Photo") + '</span>' +
-    '</div>';
-  } else {
-    replyHtml = '<div class="reply-quote-box" style="font-style:italic; opacity:0.6;">Replying to a deleted message</div>';
-  }
-}
 
-    // 4. NORMAL MESSAGE OUTPUT
+    // 4. REPLY HEADER LOGIC
+    let replyHeaderHtml = "";
+    if (m.reply_to_id) {
+      const original = state.messages.find(x => x.id === m.reply_to_id);
+      if (original) {
+        const origSender = original.user_id === state.userId ? "you" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "someone");
+        
+        let headerText = "";
+        if (mine) {
+          headerText = `You replied to ${origSender}`;
+        } else {
+          const replySender = profileOf(m.user_id)?.full_name?.split(" ")[0] || "Someone";
+          headerText = `${replySender} replied to ${origSender}`;
+        }
+        
+        replyHeaderHtml = '<div class="reply-header">↪ ' + esc(headerText) + '</div>';
+      } else {
+        replyHeaderHtml = '<div class="reply-header">↪ Replying to a deleted message</div>';
+      }
+    }
+
+    // 5. NORMAL MESSAGE OUTPUT (With wrapper for header)
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
-      '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-user-id="' + esc(m.user_id) + '" data-text="' + esc(m.body || "") + '">' +
-        replyHtml + '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
-        '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
-        reactionHtml + 
+      '<div style="display:flex; flex-direction:column; align-items:' + (mine ? 'flex-end' : 'flex-start') + '; max-width:76%;">' +
+        replyHeaderHtml +
+        '<div class="msgr-bub" data-message-id="' + esc(m.id) + '" data-own-message="' + (mine ? "1" : "0") + '" data-user-id="' + esc(m.user_id) + '" data-text="' + esc(m.body || "") + '" style="max-width:100%; margin-bottom:0;">' +
+          '<span class="msg-text">' + (m.body ? esc(m.body) : "") + '</span>' + editedLabel + pinIcon + attach +
+          '<span class="msgr-time">' + esc(new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) + (mine ? " · Sent" : "") + '</span>' +
+          reactionHtml + 
+        '</div>' +
       '</div>' +
       readReceiptHtml + 
     '</div>';
