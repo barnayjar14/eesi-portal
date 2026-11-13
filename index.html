@@ -1299,16 +1299,30 @@ function extractReportPhotoUrls(details) {
     const d = new Date(v + "T00:00:00");
     return isNaN(d) ? String(v) : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
-  function calculateDtrHours(timeIn, timeOut, isApproved) {
+  function calculateOtMinutes(timeIn, timeOut) {
   if (!timeIn || !timeOut) return 0;
   const p = t => { const x = String(t).split(":").map(Number); return x[0] * 60 + (x[1] || 0); };
   let mins = p(timeOut) - p(timeIn);
   if (mins < 0) mins += 1440; // Overnight shift
-  let hours = mins / 60;
   
-  // Standard shift is 8 hours. If not approved, cap at 8 hours.
-  if (!isApproved && hours > 8) return 8;
-  return hours;
+  // Standard shift is 8am-5pm = 9 hours (540 minutes)
+  const standardMins = 9 * 60;
+  
+  // If total time is greater than 9 hours, return the difference
+  return mins > standardMins ? mins - standardMins : 0;
+}
+
+function calculateDtrHours(timeIn, timeOut, isApproved) {
+  if (!timeIn || !timeOut) return 0;
+  const p = t => { const x = String(t).split(":").map(Number); return x[0] * 60 + (x[1] || 0); };
+  let mins = p(timeOut) - p(timeIn);
+  if (mins < 0) mins += 1440;
+  
+  const standardMins = 9 * 60;
+  
+  // If approved, count ALL hours. If not approved, cap at 9 hours max.
+  if (isApproved) return mins / 60;
+  return (mins > standardMins ? standardMins : mins) / 60;
 }
   function profileOf(id) { return state.profiles.find(p => p.user_id === id) || null; }
   function profileName(id) {
@@ -2851,14 +2865,30 @@ function updateAnnouncementTicker() {
   const rows = isManager() ? state.dtrs : dtrOwn();
   $("dtrRows").innerHTML = rows.map(r => {
     const mine = r.user_id === state.userId;
-    const h = calculateDtrHours(r.time_in, r.time_out, r.overtime_approved);
-    const approvalBadge = r.overtime_approved ? ' <span class="badge" style="background:var(--green)">OT Approved</span>' : '';
+    
+    // Calculate hours
+    const totalHours = calculateDtrHours(r.time_in, r.time_out, r.overtime_approved);
+    const otMins = calculateOtMinutes(r.time_in, r.time_out);
+    const otHours = otMins / 60;
+    
+    let approvalHtml = "";
+    if (otHours > 0) {
+      if (r.overtime_approved) {
+        approvalHtml = '<div class="badge" style="background:var(--green); margin-top:4px;">OT Approved: +' + otHours.toFixed(2) + ' hrs</div>';
+      } else if (isManager()) {
+        approvalHtml = '<div class="inline-actions" style="margin-top:4px;">' +
+          '<button class="green small-btn" type="button" data-act="approve-ot" data-id="' + esc(r.id) + '">Approve ' + otHours.toFixed(2) + 'h OT</button>' +
+          '<span class="badge" style="background:var(--amber)">Pending</span></div>';
+      } else {
+        approvalHtml = '<div class="badge" style="background:var(--amber); margin-top:4px;">Pending OT Approval</div>';
+      }
+    }
     
     return '<tr><td>' + esc(fmtTableDate(r.work_date)) + '</td>' +
       '<td>' + esc(profileName(r.user_id)) + '</td>' +
-      '<td>' + esc(r.location) + '<div class="muted">' + esc(r.job) + approvalBadge + '</div></td>' +
+      '<td>' + esc(r.location) + '<div class="muted">' + esc(r.job) + approvalHtml + '</div></td>' +
       '<td>' + esc(r.time_in) + ' – ' + esc(r.time_out) + '</td>' +
-      '<td>' + h.toFixed(2) + '</td>' +
+      '<td style="font-weight:bold;">' + totalHours.toFixed(2) + '</td>' +
       '<td>' + (mine || isAdmin() ? '<button type="button" aria-label="Delete DTR entry" class="red small-btn" data-act="del-dtr" data-id="' + esc(r.id) + '">×</button>' : '') + '</td></tr>';
   }).join("") || '<tr><td colspan="6" class="muted">No DTR entries yet.</td></tr>';
   
@@ -3525,6 +3555,20 @@ $("reportDate").min = todayStr;
     ["dtrLocation", "dtrJob", "dtrIn", "dtrOut"].forEach(id => { $(id).value = ""; });
   }
   window.clearDtrForm = clearDtrForm;
+
+async function approveOvertime(id) {
+  if (!isManager()) return toast("Only Admin or Representative can approve OT.");
+  if (!confirm("Approve overtime for this DTR entry?")) return;
+  
+  const { error } = await client.from("dtr_entries")
+    .update({ overtime_approved: true })
+    .eq("id", id);
+    
+  if (error) return toast("Could not approve OT: " + error.message);
+  
+  await loadDtrs();
+  toast("Overtime Approved successfully!");
+}
 
   async function addDtr() {
   if (!checkNetwork()) return;
@@ -4752,6 +4796,8 @@ function getActiveSignatureSrc() {
     else if (act === "del-site") deleteRow("sites", id, loadSites);
     else if (act === "del-sched") deleteRow("schedules", id, loadSchedules);
     else if (act === "del-dtr") deleteRow("dtr_entries", id, loadDtrs);
+    else if (act === "del-dtr") deleteRow("dtr_entries", id, loadDtrs);
+else if (act === "approve-ot") approveOvertime(id);
     else if (act === "del-note") deleteRow("notes", id, loadNotes);
     else if (act === "del-rec") deleteRow("recommendations", id, loadRecs);
     else if (act === "del-ann") deleteRow("announcements", id, loadAnnouncements);
