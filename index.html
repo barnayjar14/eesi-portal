@@ -3633,7 +3633,7 @@ document.addEventListener("click", async e => {
   }
 
   // Action Buttons
-  const actBtn = e.target.closest("[data-msg-act]");
+    const actBtn = e.target.closest("[data-msg-act]");
   if (actBtn) {
     menu.classList.add("hidden");
     const act = actBtn.dataset.msgAct;
@@ -3643,14 +3643,7 @@ document.addEventListener("click", async e => {
       navigator.clipboard.writeText(activeMsgContext.text);
       toast("Message copied!");
     } 
-    else if (act === "forward") {
-      if (navigator.share) {
-        navigator.share({ text: activeMsgContext.text }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(activeMsgContext.text);
-        toast("Message copied (ready to forward)");
-      }
-    }
+    else if (act === "forward") openForwardSheet(activeMsgContext.text);
     else if (act === "pin") {
       const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
       if (error) return toast("Could not pin: " + error.message);
@@ -4380,6 +4373,110 @@ function getActiveSignatureSrc() {
       '<div class="sheet-actions"><button class="gray" type="button" data-act="close-sheet">Cancel</button>' +
       '<button class="red" type="button" data-act="' + act + '" data-id="' + esc(id) + '">Confirm</button></div>';
   }
+  function openForwardSheet(text) {
+  if (!state.threads.length) return toast("No chats available to forward to.");
+  
+  const rows = state.threads.map(t => {
+    const title = threadTitle(t);
+    const avatar = threadAvatar(t);
+    return '<button class="person" type="button" data-act="forward-to" data-id="' + esc(t.id) + '" data-text="' + esc(text) + '">' +
+      '<span class="tap">' + avatar + '</span>' +
+      '<span class="person-info">' +
+        '<b>' + esc(title) + '</b>' +
+        '<span class="muted">' + (t.kind === 'group' ? 'Group Chat' : 'Direct Message') + '</span>' +
+      '</span>' +
+      '<span aria-hidden="true">›</span>' +
+    '</button>';
+  }).join("");
+
+  openSheet(
+    '<h2>Forward to...</h2>' +
+    '<p class="muted" style="margin-top:0; margin-bottom:12px;">Select a chat to forward this message to.</p>' +
+    '<div class="msgr-list" style="max-height: 60vh;">' + rows + '</div>' +
+    sheetClose()
+  );
+}
+
+async function executeForward(threadId, text) {
+  closeSheet();
+  
+  const payload = {
+    thread_id: threadId,
+    user_id: state.userId,
+    sender_name: state.profile?.full_name || state.email,
+    body: "↪️ Forwarded message:\n\n" + text
+  };
+
+  const { data, error } = await client.from("messages").insert(payload).select().single();
+  if (error) return toast("Could not forward: " + error.message);
+  
+  toast("Message forwarded!");
+  
+  // If we are currently inside the target chat, instantly show the forwarded message
+  if (state.activeThread === threadId) {
+    state.messages.push(data);
+    renderMessages();
+  }
+}
+  function openForwardSheet(text) {
+  if (!state.threads.length) return toast("No chats available to forward to.");
+  
+  const rows = state.threads.map(t => {
+    const title = threadTitle(t);
+    const avatar = threadAvatar(t);
+    return '<button class="person" type="button" data-act="forward-to" data-id="' + esc(t.id) + '" data-text="' + esc(text) + '">' +
+      '<span class="tap">' + avatar + '</span>' +
+      '<span class="person-info">' +
+        '<b>' + esc(title) + '</b>' +
+        '<span class="muted">' + (t.kind === 'group' ? 'Group Chat' : 'Direct Message') + '</span>' +
+      '</span>' +
+      '<span aria-hidden="true">›</span>' +
+    '</button>';
+  }).join("");
+
+  openSheet(
+    '<h2>Forward to...</h2>' +
+    '<p class="muted" style="margin-top:0; margin-bottom:12px;">Select a chat to forward this message to.</p>' +
+    '<div class="msgr-list" style="max-height: 60vh;">' + rows + '</div>' +
+    sheetClose()
+  );
+}
+
+async function executeForward(threadId, text) {
+  closeSheet();
+  
+  const payload = {
+    thread_id: threadId,
+    user_id: state.userId,
+    sender_name: state.profile?.full_name || state.email,
+    body: "↪️ Forwarded message:\n\n" + text
+  };
+
+  const { data, error } = await client.from("messages").insert(payload).select().single();
+  if (error) return toast("Could not forward: " + error.message);
+  
+  toast("Message forwarded!");
+  
+  // If we are currently inside the target chat, instantly show the forwarded message
+  if (state.activeThread === threadId) {
+    state.messages.push(data);
+    renderMessages();
+  }
+}
+  function openPersonMenu(id) {
+    const p = profileOf(id);
+    if (!p) return toast("Profile is still loading");
+    const role = state.roles[id];
+    const label = role ? roleLabel(role.app_role) : (p.team || "Member");
+    openSheet(
+      '<div class="sheet-person">' + bigFace(p) + '<h2>' + esc(p.full_name || "Member") + '</h2>' +
+      '<p class="muted">' + esc(label) + '</p></div>' +
+      '<button class="sheet-btn" type="button" data-act="view-profile" data-id="' + esc(id) + '">View profile</button>' +
+      (id === state.userId ? '' : '<button class="sheet-btn primary" type="button" data-act="open-dm" data-id="' + esc(id) + '">Chat</button>') +
+      sheetClose()
+    );
+  }
+  
   function openPersonMenu(id) {
     const p = profileOf(id);
     if (!p) return toast("Profile is still loading");
@@ -4987,6 +5084,25 @@ function getActiveSignatureSrc() {
   }
 
   /* ---------------- delegated clicks / changes ---------------- */
+  document.addEventListener("click", async (e) => {
+  const forwardBtn = e.target.closest('[data-act="forward-to"]');
+  if (forwardBtn) {
+    const threadId = forwardBtn.dataset.id;
+    const text = forwardBtn.dataset.text;
+    await executeForward(threadId, text);
+  }
+});
+  /* ---------------- delegated clicks / changes ---------------- */
+  document.addEventListener("click", async (e) => {
+  const forwardBtn = e.target.closest('[data-act="forward-to"]');
+  if (forwardBtn) {
+    const threadId = forwardBtn.dataset.id;
+    const text = forwardBtn.dataset.text;
+    await executeForward(threadId, text);
+  }
+});
+  $("openAddSite").addEventListener("click", () => $("addSiteOverlay").classList.remove("hidden"));
+  $("cancelAddSite").addEventListener("click", () => $("addSiteOverlay").classList.add("hidden"));
   $("openAddSite").addEventListener("click", () => $("addSiteOverlay").classList.remove("hidden"));
   $("cancelAddSite").addEventListener("click", () => $("addSiteOverlay").classList.add("hidden"));
 
