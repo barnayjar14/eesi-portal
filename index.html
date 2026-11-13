@@ -3651,12 +3651,17 @@ document.addEventListener("click", async e => {
       await loadMessages(state.activeThread);
     }
     else if (act === "delete") {
-      if (confirm("Delete this message for everyone?")) {
-        const { data, error } = await client.rpc("delete_my_message", { p_message_id: Number(activeMsgContext.id) });
-        if (error) return toast("Could not delete: " + error.message);
-        await loadMessages(state.activeThread);
-      }
-    }
+  if (confirm("Delete this message for everyone?")) {
+    const { error } = await client
+      .from("messages")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", Number(activeMsgContext.id))
+      .eq("user_id", state.userId); // Security: only delete your own message
+    
+    if (error) return toast("Could not delete: " + error.message);
+    await loadMessages(state.activeThread);
+  }
+}
     activeMsgContext = null;
   }
 });
