@@ -432,8 +432,13 @@ button:disabled{opacity:.4;filter:grayscale(.3);}
   font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex;
   align-items: center; gap: 2px; z-index: 10; cursor: pointer;
 }
-.msgr-row:not(.mine) .msg-reaction-badge { right: auto; left: 8px; }
-body.dark .msg-reaction-badge { background: var(--navy); border-color: #334155; }
+.msgr-row:not(.mine) .msg-reaction-badge {
+  position: absolute; bottom: -12px; right: 8px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px; padding: 1px 6px;
+  font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex;
+  align-items: center; gap: 2px; z-index: 10; cursor: pointer;
+}
+.msg-reaction-badge.clickable:hover { background: var(--border); }
 
 /* Tiny avatars for Read Receipts */
 .read-receipt-avatar {
@@ -5488,6 +5493,7 @@ case "do-block": toggleBlock(id); return true;
       case "call-end": endCall(null, true); return true;
       case "call-accept": acceptIncoming(); return true;
       case "call-decline": declineIncoming(); return true;
+      case "chat-media": openMediaSheet(); return true;
       case "remove-my-reaction": removeMyReaction(id); return true;
       case "chat-save-photo": savePhotoById(id); return true;
       case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
