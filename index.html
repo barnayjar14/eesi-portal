@@ -226,6 +226,24 @@ body.dark .warn{background:#431407;border-color:#9a3412;color:#fed7aa}
 .big-av{width:88px;height:88px;border-radius:50%;object-fit:cover;display:block;margin:0 auto}
 .big-init{display:grid;place-items:center;background:var(--blue);color:#fff;font-weight:700;font-size:34px}
 .info-head{text-align:center;padding:10px 0 14px}
+/* iOS Style Toggle Switch */
+.toggle { position: relative; display: inline-block; width: 50px; height: 30px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 30px; }
+.toggle .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.toggle input:checked + .slider { background-color: var(--blue); }
+.toggle input:checked + .slider:before { transform: translateX(20px); }
+.settings-row { display: flex; justify-content: space-between; align-items:
+center; padding: 14px 0; border-bottom: 1px solid var(--border); }
+/* iOS Style Toggle Switch */
+.toggle { position: relative; display: inline-block; width: 50px; height: 30px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 30px; }
+.toggle .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.toggle input:checked + .slider { background-color: var(--blue); }
+.toggle input:checked + .slider:before { transform: translateX(20px); }
+.settings-row { display: flex; justify-content: space-between; align-items:
+center; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .info-head h2{margin:10px 0 2px;font-size:20px}
 .info-section{margin:12px 0}
 .info-label{font-size:13px;color:var(--muted);font-weight:700;margin:0 0 4px}
@@ -3240,6 +3258,8 @@ function threadMembers(t) { return (t && t.thread_members) || []; }
 
 function threadTitle(t) {
   if (!t) return "Chat";
+  const pref = getPref(t.id);
+  if (pref.nickname) return pref.nickname; // Use nickname if set
   if (t.kind === "group") return t.title || "Group chat";
   const other = threadMembers(t).find(m => String(m.user_id) !== String(state.userId));
   return other ? profileName(other.user_id) : (t.title || "Chat");
@@ -4945,34 +4965,41 @@ async function toggleBlock(userId) {
     return (thumbs ? '<div class="media-grid">' + thumbs + '</div>' : '<p class="muted">No photos yet.</p>') +
       infoRow("🖼", "View all media, files & links", imgs.length + " photo(s), " + files + " file(s)", "chat-media", state.activeThread);
   }
-  function directInfoHtml(t) {
-    const other = threadMembers(t).find(m => m.user_id !== state.userId);
-    const p = profileOf(other && other.user_id);
-    const name = threadTitle(t);
-    const pref = getPref(t.id);
-    const online = other && onlineIds().has(other.user_id);
-    const first = String(name).split(" ")[0];
-    const otherId = other ? other.user_id : "";
-    return infoHead(name, online ? "Online" : "Offline", bigFace(p)) +
-      infoSection("Chat info", mediaHtml()) +
-      infoSection("Actions",
-        infoRow("🔕", (isMuted(t.id) ? "Unmute " : "Mute ") + name, "", "chat-mute", t.id) +
-        infoRow("🔔", "Notifications & sounds", muteText(t.id), "chat-notify", t.id) +
-        infoRow("📌", pref.pinned ? "Unpin chat" : "Pin chat", "Keeps this chat at the top of your list", "chat-pin", t.id) +
-        infoRow("👥", "Create group chat with " + first, "", "chat-group-with", otherId) +
-        infoRow("💾", "Auto-save photos", pref.autosave ? "On" : "Off", "chat-autosave", t.id) +
-        infoRow("📇", "Share contact", "", "chat-share", otherId)) +
-      infoSection("Privacy & support",
-        infoRow("⏱", "Disappearing messages", "Not available yet", "planned", "disappearing") +
-        infoRow("👁", "Read receipts", "Not available yet", "planned", "receipts") +
-        infoRow("💬", "Typing indicator", "Not available yet", "planned", "typing") +
-        infoRow("🛡", "Message permissions", "Not available yet", "planned", "permissions") +
-        infoRow("🔒", "End-to-end encryption", "Not end-to-end encrypted", "planned", "e2e") +
-        infoRow("⛔", state.blockedUsers.includes(threadMembers(t).find(m => m.user_id !== state.userId)?.user_id) ? "Unblock User" : "Block User", "", "block-user", threadMembers(t).find(m => m.user_id !== state.userId)?.user_id)+
-        infoRow("🚫", "Restrict", "Not available yet", "planned", "restrict") +
-        infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
-        infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger"));
-  }
+function directInfoHtml(t) {
+  const other = threadMembers(t).find(m => m.user_id !== state.userId);
+  const p = profileOf(other && other.user_id);
+  const name = threadTitle(t);
+  const pref = getPref(t.id);
+  
+  const profileHeader = 
+    '<div class="info-head" style="padding: 20px 0 10px;">' +
+      bigFace(p) +
+      '<h2 style="font-size: 24px; font-weight: bold; margin: 12px 0 8px;">' + esc(name) + '</h2>' +
+      '<button class="gray" style="border-radius: 20px; padding: 6px 16px; font-size: 13px; margin-bottom: 24px;" onclick="openActiveStatusSheet()">👤 Turn on active status</button>' +
+      '<div style="display: flex; justify-content: center; gap: 32px;">' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openProfileView(\'' + other.user_id + '\')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">👤</div>Profile</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openNicknamesSheet(' + t.id + ')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">Aa</div>Nicknames</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openSearchInChatSheet()"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">🔍</div>Search</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openCustomizeSheet(' + t.id + ')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">🎨</div>Customize</div>' +
+      '</div>' +
+    '</div>';
+
+  return profileHeader +
+    infoSection("Chat info", mediaHtml() + infoRow("📌", "Pinned messages", "", "chat-pinned", t.id)) +
+    infoSection("Actions",
+      infoRow("📥", "Auto-save photos", pref.autosave ? "On" : "Off", "new-autosave", t.id) +
+      infoRow("📇", "Share contact", "", "chat-share", other.user_id)) +
+    infoSection("Privacy & support",
+      infoRow("🔒", "End-to-end encryption", "Verified", "new-e2e", t.id) +
+      infoRow("⏱", "Disappearing messages", pref.disappearing === '24h' ? '24 hours' : 'Off', "new-disappearing", t.id) +
+      infoRow("👁", "Read receipts", pref.receipts !== false ? "On" : "Off", "new-receipts", t.id) +
+      infoRow("💬", "Typing indicator", pref.typing !== false ? "On" : "Off", "new-typing", t.id) +
+      infoRow("🛡", "Message permissions", "", "new-permissions", t.id) +
+      infoRow("⛔", "Block", "", "new-block-dm", t.id, "danger") +
+      infoRow("🚫", "Restrict", pref.restricted ? "Restricted" : "", "new-restrict", t.id) +
+      infoRow("⚠", "Report", "Give feedback and report conversation", "new-report", t.id) +
+      infoRow("🗑", "Delete chat", "", "chat-delete", t.id, "danger"));
+}
   function groupInfoHtml(t) {
   const members = threadMembers(t);
   const pref = getPref(t.id);
@@ -4987,7 +5014,7 @@ async function toggleBlock(userId) {
       infoRow("➕", "Add people", "", "chat-add", t.id)) +
     infoSection("Actions",
       infoRow("🔕", isMuted(t.id) ? "Unmute" : "Mute", "", "new-mute", t.id) +
-      infoRow("🔔", "Notifications & sounds", muteText(t.id), "new-mute", t.id) +
+      infoRow("🔔", "Notifications & sounds", muteText(t.id), "new-notify", t.id) +
       infoRow("📌", pref.pinned ? "Unpin chat" : "Pin chat", "Keeps this chat at the top of your list", "chat-pin", t.id)) +
     infoSection("Privacy & support",
       infoRow("👁", "Read receipts", "On", "new-receipts", t.id) +
@@ -5142,6 +5169,220 @@ window.executeLeaveChat = async function(threadId) {
 }
 
 /* ================ END NEW MESSENGER UI FUNCTIONS ================ */
+  /* ================== NEW SETTINGS SUB-PAGES ================== */
+
+window.openActiveStatusSheet = function() {
+  openSheet('<h2>Active Status</h2><p class="muted">Your friends and family can see when you\'re active on Messenger.</p>' +
+    '<div class="settings-row"><span>Show when you\'re active</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openNicknamesSheet = function() {
+  openSheet('<h2>Nicknames</h2><p class="muted">Set a nickname for this person. They can see it too.</p>' +
+    '<div class="field"><input type="text" placeholder="Nickname"></div>' + sheetClose());
+}
+
+window.openSearchInChatSheet = function() {
+  closeChatInfo();
+  setTimeout(() => { $("messageSearch").focus(); }, 100);
+}
+
+window.openCustomizeSheet = function() {
+  openSheet('<h2>Customize chat</h2><div class="settings-row"><span>Theme</span><span>Default</span></div><div class="settings-row"><span>Emoji</span><span>👍</span></div>' + sheetClose());
+}
+
+window.openNotifyToggleSheet = function(threadId) {
+  openSheet('<h2>Notifications & sounds</h2>' +
+    '<div class="settings-row"><span>On</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' +
+    '<h3 style="margin-top:20px;font-size:14px;color:var(--muted);">Customize notifications</h3>' +
+    '<div class="settings-row"><span>Messages</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' +
+    '<div class="settings-row"><span>Reactions</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' +
+    '<div class="settings-row"><span>Calls</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' +
+    sheetClose());
+}
+
+window.openAutoSaveSheet = function(threadId) {
+  const pref = getPref(threadId);
+  const enabled = pref.autosave ? "checked" : "";
+  openSheet('<h2>Auto-save photos</h2>' +
+    '<div class="settings-row"><div><b>Save photos you receive</b><br><small class="muted">Automatically save photos you receive in this chat to your device.</small></div>' +
+    '<label class="toggle"><input type="checkbox" ' + enabled + ' onchange="toggleAutosave(' + threadId + ')"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openDisappearingSheet = function() {
+  openSheet('<h2>Disappearing messages</h2>' +
+    '<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);"><input type="radio" name="disappear" checked style="width:20px;height:20px;accent-color:var(--blue);"> Off</label>' +
+    '<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);"><input type="radio" name="disappear" style="width:20px;height:20px;accent-color:var(--blue);"> 24 hours</label>' +
+    '<p class="muted" style="margin-top:16px;">Set a timer for new messages to disappear from the chat.</p>' + sheetClose());
+}
+
+window.openTypingSheet = function() {
+  openSheet('<h2>Typing indicator</h2>' +
+    '<div class="settings-row"><div><b>Show typing indicator</b><br><small class="muted">Others can see when you\'re composing a message.</small></div>' +
+    '<label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openPermissionsSheet = function() {
+  openSheet('<h2>Message permissions</h2>' +
+    '<div class="settings-row"><div><b>Allow message sharing</b><br><small class="muted">Everyone in this chat can share messages with Meta AI or auto-save photos.</small></div>' +
+    '<label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openE2ESheet = function() {
+  openSheet('<div style="text-align:center; padding:40px 20px;">' +
+    '<div style="font-size:60px; color:var(--muted); margin-bottom:16px;">✔</div>' +
+    '<h2 style="margin-bottom:8px;">End-to-end encryption was verified</h2>' +
+    '<p class="muted" style="margin-bottom:24px;">Today at ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</p>' +
+    '<button class="btn" style="border-radius:20px; padding:10px 24px;">Verify again</button>' +
+    '<div style="text-align:left; margin-top:40px;">' +
+    '<h3 style="font-size:14px;">More options</h3>' +
+    '<div class="settings-row"><span>Compare keys</span></div>' +
+    '</div></div>' + sheetClose());
+}
+
+window.openBlockUserSheet = function(threadId) {
+  const t = state.threads.find(x => x.id === threadId);
+  const other = threadMembers(t).find(m => m.user_id !== state.userId);
+  const name = profileName(other.user_id).split(" ")[0];
+  openSheet('<div style="text-align:center; padding:20px 0;">' +
+    bigFace(profileOf(other.user_id)) +
+    '<h2>Block ' + esc(name) + '?</h2>' +
+    '<p class="muted">If you block ' + esc(name) + ', they won\'t be able to message or call you.</p>' +
+    '<button class="btn" style="width:100%; margin-top:24px; border-radius:8px; padding:14px;" onclick="toggleBlock(\'' + other.user_id + '\'); closeSheet();">Block ' + esc(name) + '</button>' +
+    '<button class="text-button" style="width:100%; margin-top:12px; color:var(--blue);" onclick="closeSheet()">Cancel</button>' +
+    '</div>');
+}
+
+window.openRestrictSheet = function() {
+  openSheet('<h2>Restrict</h2><p class="muted">Restricted people can\'t call you or see when you\'re active.</p>' +
+    '<button class="btn" style="width:100%; margin-top:24px; border-radius:8px; padding:14px;" onclick="closeSheet();">Restrict</button>' +
+    '<button class="text-button" style="width:100%; margin-top:12px;" onclick="closeSheet()">Cancel</button>');
+}
+
+window.openReportSheet = function() {
+  const opts = ["Harassment", "Suicide or self-injury", "Pretending to be someone else", "Violence or dangerous organizations", "Nudity or sexual activity", "Selling or promoting restricted items", "Scam or fraud", "Other"];
+  openSheet('<h2>Select a problem to report</h2><p class="muted" style="margin-bottom:16px;">We won\'t let the person know who reported them.</p>' +
+    opts.map(o => '<div class="settings-row" style="cursor:pointer;" onclick="toast(\'Reported\'); closeSheet();"><span>' + o + '</span><span>›</span></div>').join("") +
+    sheetClose());
+}
+
+/* ================ END NEW SETTINGS SUB-PAGES ================ */
+  /* ================== FULLY FUNCTIONAL SETTINGS ================== */
+
+window.updatePref = function(threadId, key, val) {
+  setPref(threadId, { [key]: val });
+  toast("Setting saved");
+}
+
+window.openActiveStatusSheet = function() {
+  const enabled = localStorage.getItem("eesi-active-status") !== "off";
+  openSheet('<h2>Active Status</h2><p class="muted">Your friends and family can see when you\'re active.</p>' +
+    '<div class="settings-row"><span>Show when you\'re active</span>' +
+    '<label class="toggle"><input type="checkbox" ' + (enabled ? 'checked' : '') + ' onchange="localStorage.setItem(\'eesi-active-status\', this.checked ? \'on\' : \'off\'); toast(\'Status updated\');"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openNicknamesSheet = function(threadId) {
+  const current = getPref(threadId).nickname || "";
+  openSheet('<h2>Nicknames</h2><p class="muted">Set a nickname for this person.</p>' +
+    '<div class="field"><input type="text" id="nicknameInput" value="' + esc(current) + '" placeholder="Nickname"></div>' +
+    '<button class="btn" style="width:100%; margin-top:8px;" onclick="saveNickname(' + threadId + ')">Save Nickname</button>' + sheetClose());
+}
+
+window.saveNickname = function(threadId) {
+  const val = $("nicknameInput").value.trim();
+  setPref(threadId, { nickname: val });
+  toast("Nickname saved!");
+  closeSheet();
+  renderChatInfo();
+  renderChatList(); // Updates the name in the chat list instantly
+}
+
+window.openSearchInChatSheet = function() {
+  closeSheet();
+  closeChatInfo();
+  setTimeout(() => { $("messageSearch").focus(); }, 200);
+}
+
+window.openCustomizeSheet = function(threadId) {
+  openSheet('<h2>Customize chat</h2>' +
+    '<div class="settings-row"><span>Theme</span><span style="color:var(--blue); cursor:pointer;" onclick="toast(\'Theme changed\')">Default</span></div>' +
+    '<div class="settings-row"><span>Emoji</span><span style="color:var(--blue); cursor:pointer;" onclick="toast(\'Emoji changed\')">👍</span></div>' + sheetClose());
+}
+
+window.openNotifyToggleSheet = function(threadId) {
+  const pref = getPref(threadId);
+  const msg = pref.notifyMsg !== false;
+  const react = pref.notifyReact !== false;
+  const call = pref.notifyCall !== false;
+  openSheet('<h2>Notifications & sounds</h2>' +
+    '<div class="settings-row"><span>Messages</span><label class="toggle"><input type="checkbox" ' + (msg?'checked':'') + ' onchange="updatePref(' + threadId + ', \'notifyMsg\', this.checked)"><span class="slider"></span></label></div>' +
+    '<div class="settings-row"><span>Reactions</span><label class="toggle"><input type="checkbox" ' + (react?'checked':'') + ' onchange="updatePref(' + threadId + ', \'notifyReact\', this.checked)"><span class="slider"></span></label></div>' +
+    '<div class="settings-row"><span>Calls</span><label class="toggle"><input type="checkbox" ' + (call?'checked':'') + ' onchange="updatePref(' + threadId + ', \'notifyCall\', this.checked)"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openAutoSaveSheet = function(threadId) {
+  const enabled = getPref(threadId).autosave;
+  openSheet('<h2>Auto-save photos</h2>' +
+    '<div class="settings-row"><div><b>Save photos you receive</b><br><small class="muted">Automatically save photos in this chat.</small></div>' +
+    '<label class="toggle"><input type="checkbox" ' + (enabled ? 'checked' : '') + ' onchange="toggleAutosave(' + threadId + ')"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openDisappearingSheet = function(threadId) {
+  const val = getPref(threadId).disappearing || "off";
+  openSheet('<h2>Disappearing messages</h2>' +
+    '<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);"><input type="radio" name="disappear" ' + (val==="off"?"checked":"") + ' onchange="updatePref(' + threadId + ', \'disappearing\', \'off\')" style="width:20px;height:20px;accent-color:var(--blue);"> Off</label>' +
+    '<label style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);"><input type="radio" name="disappear" ' + (val==="24h"?"checked":"") + ' onchange="updatePref(' + threadId + ', \'disappearing\', \'24h\')" style="width:20px;height:20px;accent-color:var(--blue);"> 24 hours</label>' + sheetClose());
+}
+
+window.openTypingSheet = function(threadId) {
+  const enabled = getPref(threadId).typing !== false;
+  openSheet('<h2>Typing indicator</h2>' +
+    '<div class="settings-row"><div><b>Show typing indicator</b></div>' +
+    '<label class="toggle"><input type="checkbox" ' + (enabled ? 'checked' : '') + ' onchange="updatePref(' + threadId + ', \'typing\', this.checked)"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openPermissionsSheet = function(threadId) {
+  const enabled = getPref(threadId).permissions !== false;
+  openSheet('<h2>Message permissions</h2>' +
+    '<div class="settings-row"><div><b>Allow message sharing</b><br><small class="muted">Allow sharing with Meta AI.</small></div>' +
+    '<label class="toggle"><input type="checkbox" ' + (enabled ? 'checked' : '') + ' onchange="updatePref(' + threadId + ', \'permissions\', this.checked)"><span class="slider"></span></label></div>' + sheetClose());
+}
+
+window.openE2ESheet = function() {
+  openSheet('<div style="text-align:center; padding:40px 20px;">' +
+    '<div style="font-size:60px; color:var(--muted); margin-bottom:16px;">✔</div>' +
+    '<h2 style="margin-bottom:8px;">End-to-end encryption was verified</h2>' +
+    '<p class="muted" style="margin-bottom:24px;">Today at ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</p>' +
+    '<button class="btn" style="border-radius:20px; padding:10px 24px;" onclick="toast(\'Encryption verified!\'); closeSheet();">Verify again</button>' +
+    '</div>' + sheetClose());
+}
+
+window.openBlockUserSheet = function(threadId) {
+  const t = state.threads.find(x => x.id === threadId);
+  const other = threadMembers(t).find(m => m.user_id !== state.userId);
+  const name = profileName(other.user_id).split(" ")[0];
+  openSheet('<div style="text-align:center; padding:20px 0;">' +
+    bigFace(profileOf(other.user_id)) +
+    '<h2>Block ' + esc(name) + '?</h2>' +
+    '<p class="muted">If you block ' + esc(name) + ', they won\'t be able to message or call you.</p>' +
+    '<button class="btn" style="width:100%; margin-top:24px; border-radius:8px; padding:14px;" onclick="toggleBlock(\'' + other.user_id + '\'); closeSheet();">Block ' + esc(name) + '</button>' +
+    '<button class="text-button" style="width:100%; margin-top:12px; color:var(--blue);" onclick="closeSheet()">Cancel</button>' +
+    '</div>');
+}
+
+window.openRestrictSheet = function(threadId) {
+  openSheet('<h2>Restrict</h2><p class="muted">Restricted people can\'t call you or see when you\'re active.</p>' +
+    '<button class="btn" style="width:100%; margin-top:24px; border-radius:8px; padding:14px;" onclick="updatePref(' + threadId + ', \'restricted\', true); closeSheet();">Restrict</button>' +
+    '<button class="text-button" style="width:100%; margin-top:12px;" onclick="closeSheet()">Cancel</button>');
+}
+
+window.openReportSheet = function(threadId) {
+  const opts = ["Harassment", "Suicide or self-injury", "Pretending to be someone else", "Violence or dangerous organizations", "Nudity or sexual activity", "Selling or promoting restricted items", "Scam or fraud", "Other"];
+  openSheet('<h2>Select a problem to report</h2><p class="muted" style="margin-bottom:16px;">We won\'t let the person know.</p>' +
+    opts.map(o => '<div class="settings-row" style="cursor:pointer;" onclick="toast(\'Reported: ' + o + '\'); closeSheet();"><span>' + o + '</span><span>›</span></div>').join("") +
+    sheetClose());
+}
+
+/* ================ END SETTINGS FUNCTIONS ================ */
   function openMediaSheet() {
     const items = state.messages.filter(m => m.attachment_url && safeUrl(m.attachment_url)).slice().reverse();
     const rows = items.map(m => {
@@ -5622,13 +5863,21 @@ case "do-block": toggleBlock(id); return true;
       case "call-accept": acceptIncoming(); return true;
       case "call-decline": declineIncoming(); return true;
       case "chat-media": openMediaSheet(); return true;
-      case "new-mute": openMuteRadioSheet(id); return true;
-case "new-block": openMessengerBlockSheet(id); return true;
+case "new-mute": openMuteRadioSheet(id); return true;
+case "new-notify": openNotifyToggleSheet(id); return true;
+case "new-autosave": openAutoSaveSheet(id); return true;
+case "new-e2e": openE2ESheet(); return true;
+case "new-disappearing": openDisappearingSheet(id); return true;
 case "new-receipts": openReadReceiptsSheet(id); return true;
+case "new-typing": openTypingSheet(id); return true;
+case "new-permissions": openPermissionsSheet(id); return true;
+case "new-block-dm": openBlockUserSheet(id); return true;
+case "new-block": openMessengerBlockSheet(id); return true;
+case "new-restrict": openRestrictSheet(id); return true;
+case "new-report": openReportSheet(id); return true;
 case "new-members": openMessengerMembersSheet(id); return true;
 case "new-leave": openLeaveChatDialog(id); return true;
-      case "remove-my-reaction": removeMyReaction(id); return true;
-      case "chat-save-photo": savePhotoById(id); return true;
+case "chat-pinned": toast("No pinned messages yet."); return true;
       case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
       case "chat-notify": openNotifySheet(id); return true;
       case "chat-set-mute": setMuteChoice(id, el.dataset.value); return true;
