@@ -3777,7 +3777,7 @@ $("messageForm").addEventListener("submit", async e => {
     if (!text) return toast("Message cannot be empty.");
     const { error } = await client.from("messages")
       .update({ body: text, edited_at: new Date().toISOString() })
-      .eq("id", Number(editingMessageId))
+      .eq("id", editingMessageId)
       .eq("user_id", state.userId);
     
     if (error) return toast("Could not edit: " + error.message);
@@ -3891,7 +3891,7 @@ document.addEventListener("click", async e => {
     if (!activeMsgContext) return;
     
     const { error } = await client.rpc("react_to_message", { 
-      p_message_id: Number(activeMsgContext.id), p_emoji: emoji 
+      p_message_id: activeMsgContext.id, p_emoji: emoji 
     });
     if (error) return toast("Could not react: " + error.message);
     const msg = state.messages.find(m => String(m.id) === String(activeMsgContext.id));
@@ -3915,7 +3915,7 @@ await loadMessages(state.activeThread);
     } 
     else if (act === "forward") openForwardSheet(activeMsgContext.text);
     else if (act === "pin") {
-  const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
+  const { error } = await client.rpc("toggle_pin_message", { p_message_id: activeMsgContext.id });
   if (error) return toast("Could not pin: " + error.message);
   toast("Message pin toggled!");
   await loadMessages(state.activeThread);
@@ -3946,7 +3946,7 @@ else if (act === "delete") {
     const { error } = await client
       .from("messages")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", Number(activeMsgContext.id))
+      .eq("id", activeMsgContext.id)
       .eq("user_id", state.userId); // Security: only delete your own message
     
     if (error) return toast("Could not delete: " + error.message);
@@ -5003,7 +5003,7 @@ async function toggleBlock(userId) {
   if (!myReaction) return toast("You haven't reacted to this message.");
   
   const { error } = await client.rpc("react_to_message", { 
-    p_message_id: Number(id), p_emoji: myReaction.emoji 
+    p_message_id: id, p_emoji: myReaction.emoji 
   });
   if (error) return toast("Could not remove reaction: " + error.message);
   toast("Reaction removed");
