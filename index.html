@@ -1147,6 +1147,20 @@ your network.</div>
   </div>
   <button type="button" onclick="cancelEditMessage()" style="min-height:28px; min-width:28px; padding:0; border-radius:50%; background:var(--border); color:var(--text); font-size:16px; display:grid; place-items:center;">✕</button>
 </div>
+        <div id="replyingIndicator" class="chat-plus hidden" style="flex-direction:row; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-left:3px solid var(--green); margin-bottom: 8px;">
+  <div style="flex:1; min-width:0;">
+    <b style="font-size:12px; color:var(--green);">Replying to <span id="replyName"></span></b>
+    <div id="replyPreview" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted);"></div>
+  </div>
+  <button type="button" onclick="cancelReply()" style="min-height:28px; min-width:28px; padding:0; border-radius:50%; background:var(--border); color:var(--text); font-size:16px; display:grid; place-items:center;">✕</button>
+</div>
+<div id="editingIndicator" class="chat-plus hidden" style="flex-direction:row; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-left:3px solid var(--blue); margin-bottom: 8px;">
+  <div style="flex:1; min-width:0;">
+    <b style="font-size:12px; color:var(--blue);">Editing Message</b>
+    <div id="editingPreview" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted);"></div>
+  </div>
+  <button type="button" onclick="cancelEditMessage()" style="min-height:28px; min-width:28px; padding:0; border-radius:50%; background:var(--border); color:var(--text); font-size:16px; display:grid; place-items:center;">✕</button>
+</div>
         <div id="emojiPop" class="emoji-pop hidden">
           <span onclick="pickEmoji('😀')">😀</span><span onclick="pickEmoji('😂')">😂</span>
           <span onclick="pickEmoji('😅')">😅</span><span onclick="pickEmoji('😊')">😊</span>
@@ -1238,6 +1252,11 @@ your network.</div>
     <span data-react="🙏">🙏</span>
   </div>
   <button class="msg-context-btn" data-msg-act="copy">📋 Copy</button>
+  <button class="msg-context-btn" data-msg-act="reply">↩️ Reply</button>
+<button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
+<button class="msg-context-btn hidden" data-msg-act="edit" id="ctxEditBtn">✏️ Edit Message</button>
+<button class="msg-context-btn hidden" data-msg-act="delete" id="ctxDeleteBtn"
+style="color:var(--red);">🗑 Delete</button>
   <button class="msg-context-btn" data-msg-act="reply">↩️ Reply</button>
   <button class="msg-context-btn" data-msg-act="pin">📌 Pin message</button>
   <button class="msg-context-btn hidden" data-msg-act="edit" id="ctxEditBtn">✏️
@@ -3576,9 +3595,8 @@ function renderDtrSiteOptions() {
 }
 window.cancelReply = cancelReply;
 
-  function cancelEditMessage() {
+function cancelEditMessage() {
   cancelReply();
-  // ... rest of the code ...
   editingMessageId = null;
   $("messageText").value = "";
   $("editingIndicator").classList.add("hidden");
@@ -3586,7 +3604,7 @@ window.cancelReply = cancelReply;
 }
 window.cancelEditMessage = cancelEditMessage;
 
-  function updateSendBtn() { 
+function updateSendBtn() { 
   if (editingMessageId) {
     $("sendBtn").textContent = "✓"; 
   } else {
@@ -3594,7 +3612,7 @@ window.cancelEditMessage = cancelEditMessage;
   }
 }
 
-  function openChatInfo() {
+function openChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
     if (!t) return;
     ["activeChat", "chatCompose", "chatBrowser"].forEach(id => $(id).classList.add("hidden"));
@@ -3664,26 +3682,18 @@ function renderMessages() {
       }
     }
 
-    // REPLY HEADER
     let replyHeaderHtml = "";
     if (m.reply_to_id) {
       const original = state.messages.find(x => String(x.id) === String(m.reply_to_id));
       if (original) {
         const origSender = original.user_id === state.userId ? "you" : (profileOf(original.user_id)?.full_name?.split(" ")[0] || "someone");
-        let headerText = "";
-        if (mine) {
-          headerText = `You replied to ${origSender}`;
-        } else {
-          const replySender = profileOf(m.user_id)?.full_name?.split(" ")[0] || "Someone";
-          headerText = `${replySender} replied to ${origSender}`;
-        }
+        let headerText = mine ? `You replied to ${origSender}` : `${profileOf(m.user_id)?.full_name?.split(" ")[0] || "Someone"} replied to ${origSender}`;
         replyHeaderHtml = '<div class="reply-header">↪ ' + esc(headerText) + '</div>';
       } else {
         replyHeaderHtml = '<div class="reply-header">↪ Replying to a deleted message</div>';
       }
     }
 
-    // MESSAGE OUTPUT
     return '<div class="msgr-row' + (mine ? " mine" : "") + '">' +
       (mine ? "" : face(profileOf(m.user_id))) +
       '<div style="display:flex; flex-direction:column; align-items:' + (mine ? 'flex-end' : 'flex-start') + '; max-width:76%;">' +
@@ -3706,7 +3716,7 @@ function renderMessages() {
   autoSavePhotos();
 }
 
-  function markThreadRead(threadId) {
+function markThreadRead(threadId) {
     if (!state.userId) return;
     const now = new Date().toISOString();
     const thread = state.threads.find(t => t.id === threadId);
@@ -3912,7 +3922,30 @@ async function sendMessage(text, file) {
   }
 }
 
-  $("messageForm").addEventListener("submit", async e => {
+$("messageForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const input = $("messageText");
+  const text = input.value.trim();
+  
+  if (editingMessageId) {
+    if (!text) return toast("Message cannot be empty.");
+    const { error } = await client.from("messages")
+      .update({ body: text, edited_at: new Date().toISOString() })
+      .eq("id", Number(editingMessageId))
+      .eq("user_id", state.userId);
+    
+    if (error) return toast("Could not edit: " + error.message);
+    cancelEditMessage();
+    toast("Message edited!");
+    await loadMessages(state.activeThread);
+    return;
+  }
+
+  input.value = "";
+  updateSendBtn();
+  if (!text) { await sendMessage("👍", null); return; }
+  await sendMessage(text, null);
+});
   e.preventDefault();
   const input = $("messageText");
   const text = input.value.trim();
@@ -4059,12 +4092,12 @@ document.addEventListener("click", async e => {
     } 
     else if (act === "forward") openForwardSheet(activeMsgContext.text);
     else if (act === "pin") {
-      const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
-      if (error) return toast("Could not pin: " + error.message);
-      toast("Message pin toggled!");
-      await loadMessages(state.activeThread);
-    }
-    else if (act === "reply") {
+  const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
+  if (error) return toast("Could not pin: " + error.message);
+  toast("Message pin toggled!");
+  await loadMessages(state.activeThread);
+}
+else if (act === "reply") {
   replyingToMsg = activeMsgContext;
   const sender = profileOf(activeMsgContext.user_id)?.full_name || "Member";
   $("replyName").textContent = sender.split(" ")[0];
@@ -4076,7 +4109,7 @@ document.addEventListener("click", async e => {
   $("chatPlus").classList.add("hidden");
   activeMsgContext = null;
 }
-    else if (act === "edit") {
+else if (act === "edit") {
   editingMessageId = activeMsgContext.id;
   $("messageText").value = activeMsgContext.text;
   $("messageText").focus();
@@ -4087,7 +4120,7 @@ document.addEventListener("click", async e => {
   updateSendBtn();
   activeMsgContext = null;
 }
-    else if (act === "delete") {
+else if (act === "delete") {
   if (confirm("Delete this message for everyone?")) {
     const { error } = await client
       .from("messages")
