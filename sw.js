@@ -1,11 +1,15 @@
 const OFFLINE_URL = "./offline.html";
-const VERSION = "eesi-sw-v1";
+const VERSION = "eesi-sw-v2";   // ← bumped
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(VERSION).then((cache) => cache.addAll([OFFLINE_URL]))
+    Promise.all([
+      caches.open(VERSION).then((cache) => cache.addAll([OFFLINE_URL])).catch((err) => {
+        console.warn("[sw] offline.html cache failed:", err);
+      }),
+      self.skipWaiting()        // ← now awaited
+    ])
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -21,24 +25,28 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.mode !== "navigate") return;
   event.respondWith(
-    fetch(req).catch(() => caches.match(OFFLINE_URL))
+    fetch(req, { cache: "no-store" })    // ← always try fresh HTML
+      .catch(() => caches.match(OFFLINE_URL))
   );
 });
-// Handle notification clicks
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close(); // Close the notification
 
-  // Focus the app if it's already open, otherwise open it
+// Handle notification clicks
+self.addEventListener("notificationclick", function (event) {
+  event.notification.close();
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      for (var i = 0; i < clientList.length; i++) {
-        var client = clientList[i];
-        if (client.url.includes('index.html') && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
+      const targetOrigin = new URL("./", self.location.href).origin;   // ← match by origin
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        try {
+          if (new URL(client.url).origin === targetOrigin && "focus" in client) {
+            return client.focus();
+          }
+        } catch (_) { /* ignore invalid URLs */ }
       }
       if (clients.openWindow) {
-        return clients.openWindow('./index.html');
+        return clients.openWindow("./");
       }
     })
   );
