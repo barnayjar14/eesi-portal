@@ -5003,26 +5003,45 @@ function directInfoHtml(t) {
   function groupInfoHtml(t) {
   const members = threadMembers(t);
   const pref = getPref(t.id);
-  const faces = members.map(m => profileOf(m.user_id)).filter(Boolean).slice(0, 8)
-    .map(p => '<span class="mini-av">' + face(p) + '</span>').join("");
+  const name = threadTitle(t);
   
-  return infoHead(threadTitle(t), members.length + " members", '<span class="big-av big-init">👥</span>') +
-    infoSection("Chat info", mediaHtml()) +
+  // Use a group icon for the avatar
+  const groupAvatar = '<div class="big-av" style="background:var(--blue); display:grid; place-items:center; font-size:32px; color:white;">👥</div>';
+  
+  const profileHeader = 
+    '<div class="info-head" style="padding: 20px 0 10px;">' +
+      groupAvatar +
+      '<h2 style="font-size: 24px; font-weight: bold; margin: 12px 0 8px;">' + esc(name) + '</h2>' +
+      '<div style="display: flex; justify-content: center; gap: 32px; margin-top: 16px;">' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openMembersSheet(' + t.id + ')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">👥</div>Members</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openNicknamesSheet(' + t.id + ')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">Aa</div>Nicknames</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openSearchInChatSheet()"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">🔍</div>Search</div>' +
+        '<div style="text-align:center; font-size:12px; cursor:pointer;" onclick="openCustomizeSheet(' + t.id + ')"><div style="width:44px;height:44px;background:var(--border);border-radius:50%;display:grid;place-items:center;font-size:20px;margin:0 auto 6px;">🎨</div>Customize</div>' +
+      '</div>' +
+    '</div>';
+
+  const faces = members.map(m => profileOf(m.user_id)).filter(Boolean).slice(0, 7)
+    .map(p => '<span class="mini-av">' + face(p) + '</span>').join("");
+
+  return profileHeader +
+    infoSection("Chat info", mediaHtml() + infoRow("📌", "Pinned messages", "", "chat-pinned", t.id)) +
     infoSection("Members",
       '<div class="member-strip">' + faces + '</div>' +
-      infoRow("👥", members.length + " members", "See all", "new-members", t.id) +
+      infoRow("👥", members.length + " members", "See all", "chat-members", t.id) +
       infoRow("➕", "Add people", "", "chat-add", t.id)) +
     infoSection("Actions",
       infoRow("🔕", isMuted(t.id) ? "Unmute" : "Mute", "", "new-mute", t.id) +
       infoRow("🔔", "Notifications & sounds", muteText(t.id), "new-notify", t.id) +
-      infoRow("📌", pref.pinned ? "Unpin chat" : "Pin chat", "Keeps this chat at the top of your list", "chat-pin", t.id)) +
+      infoRow("📥", "Auto-save photos", pref.autosave ? "On" : "Off", "new-autosave", t.id)) +
     infoSection("Privacy & support",
-      infoRow("👁", "Read receipts", "On", "new-receipts", t.id) +
-      infoRow("💬", "Typing indicator", "On", "noop", t.id) +
-      infoRow("⛔", "Block a member", "", "new-block", t.id) +
-      infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
-      infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger") +
-      infoRow("🚪", "Leave chat", "", "new-leave", t.id, "danger"));
+      infoRow("🔒", "End-to-end encryption", "Not available for groups", "noop", t.id) +
+      infoRow("⏱", "Disappearing messages", pref.disappearing === '24h' ? '24 hours' : 'Off', "new-disappearing", t.id) +
+      infoRow("👁", "Read receipts", pref.receipts !== false ? "On" : "Off", "new-receipts", t.id) +
+      infoRow("💬", "Typing indicator", pref.typing !== false ? "On" : "Off", "new-typing", t.id) +
+      infoRow("🛡", "Message permissions", "", "new-permissions", t.id) +
+      infoRow("⚠", "Report", "Give feedback and report conversation", "new-report", t.id) +
+      infoRow("🚪", "Leave chat", "", "new-leave", t.id, "danger") +
+      infoRow("🗑", "Delete chat", "", "chat-delete", t.id, "danger"));
 }
   function renderChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
@@ -5117,6 +5136,27 @@ window.toggleReadReceipts = function(threadId) {
 
 // 4. Members List (With Tabs)
 window.openMessengerMembersSheet = function(threadId) {
+  const t = state.threads.find(x => x.id === threadId);
+  const members = threadMembers(t);
+  
+  const list = members.map(m => {
+    const p = profileOf(m.user_id);
+    return `<div class="person" style="border:none;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:12px 16px;">
+      ${face(p)}
+      <span class="person-info">
+        <b>${esc(p?.full_name || "Member")}</b>
+        <span class="muted" style="font-size:12px;">@${esc((p?.email || "").split("@")[0])}</span>
+      </span>
+      ${m.user_id !== state.userId ? `<button class="small-btn btn" type="button" onclick="closeSheet(); openDirect('${m.user_id}')">Chat</button>` : ''}
+    </div>`;
+  }).join("");
+
+  openSheet(`<div style="background:var(--card); min-height:100%;">
+    <h2 style="text-align:center; margin-bottom:16px;">Members</h2>
+    <div class="muted" style="padding:0 16px 8px; font-size:12px;">Other members</div>
+    ${list}
+  </div>`);
+}
   const t = state.threads.find(x => x.id === threadId);
   const members = threadMembers(t);
   
@@ -5863,38 +5903,40 @@ case "do-block": toggleBlock(id); return true;
       case "call-accept": acceptIncoming(); return true;
       case "call-decline": declineIncoming(); return true;
       case "chat-media": openMediaSheet(); return true;
-case "new-mute": openMuteRadioSheet(id); return true;
-case "new-notify": openNotifyToggleSheet(id); return true;
-case "new-autosave": openAutoSaveSheet(id); return true;
-case "new-e2e": openE2ESheet(); return true;
-case "new-disappearing": openDisappearingSheet(id); return true;
-case "new-receipts": openReadReceiptsSheet(id); return true;
-case "new-typing": openTypingSheet(id); return true;
-case "new-permissions": openPermissionsSheet(id); return true;
-case "new-block-dm": openBlockUserSheet(id); return true;
-case "new-block": openMessengerBlockSheet(id); return true;
-case "new-restrict": openRestrictSheet(id); return true;
-case "new-report": openReportSheet(id); return true;
-case "new-members": openMessengerMembersSheet(id); return true;
-case "new-leave": openLeaveChatDialog(id); return true;
-case "chat-pinned": toast("No pinned messages yet."); return true;
-      case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
-      case "chat-notify": openNotifySheet(id); return true;
-      case "chat-set-mute": setMuteChoice(id, el.dataset.value); return true;
-      case "chat-pin": setPref(id, { pinned: !getPref(id).pinned }); refreshChatViews(); return true;
-      case "chat-autosave": toggleAutosave(id); return true;
-      case "chat-group-with": openGroupWith(id); return true;
-      case "chat-share": shareContact(id); return true;
-      case "chat-members": openMembersSheet(id); return true;
-      case "chat-add": openAddSheet(id); return true;
-      case "chat-add-save": addMembers(id); return true;
-      case "chat-delete": openSheet(confirmHtml("Delete entire conversation?", "This removes the conversation from your device. It will reappear if someone sends a new message.", "chat-delete-yes", id)); return true;
-      case "chat-delete-yes": setPref(id, { hiddenAt: new Date().toISOString() }); closeSheet(); closeChat(); return true;
-      case "chat-leave": openSheet(confirmHtml("Leave this group?", "You stop getting its messages. Another member has to add you back.", "chat-leave-yes", id)); return true;
-      case "chat-leave-yes": leaveGroup(id); return true;
-      default: return false;
-    }
+    case "new-mute": openMuteRadioSheet(id); return true;
+    case "new-notify": openNotifyToggleSheet(id); return true;
+    case "new-autosave": openAutoSaveSheet(id); return true;
+    case "new-e2e": openE2ESheet(); return true;
+    case "new-disappearing": openDisappearingSheet(id); return true;
+    case "new-receipts": openReadReceiptsSheet(id); return true;
+    case "new-typing": openTypingSheet(id); return true;
+    case "new-permissions": openPermissionsSheet(id); return true;
+    case "new-block-dm": openBlockUserSheet(id); return true;
+    case "new-block": openMessengerBlockSheet(id); return true;
+    case "new-restrict": openRestrictSheet(id); return true;
+    case "new-report": openReportSheet(id); return true;
+    case "new-members": openMessengerMembersSheet(id); return true;
+    case "new-leave": openLeaveChatDialog(id); return true;
+    case "chat-pinned": toast("No pinned messages yet."); return true;
+    case "remove-my-reaction": removeMyReaction(id); return true;
+    case "chat-save-photo": savePhotoById(id); return true;
+    case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
+    case "chat-notify": openNotifySheet(id); return true;
+    case "chat-set-mute": setMuteChoice(id, el.dataset.value); return true;
+    case "chat-pin": setPref(id, { pinned: !getPref(id).pinned }); refreshChatViews(); return true;
+    case "chat-autosave": toggleAutosave(id); return true;
+    case "chat-group-with": openGroupWith(id); return true;
+    case "chat-share": shareContact(id); return true;
+    case "chat-members": openMembersSheet(id); return true;
+    case "chat-add": openAddSheet(id); return true;
+    case "chat-add-save": addMembers(id); return true;
+    case "chat-delete": openSheet(confirmHtml("Delete entire conversation?", "This removes the conversation from your device. It will reappear if someone sends a new message.", "chat-delete-yes", id)); return true;
+    case "chat-delete-yes": setPref(id, { hiddenAt: new Date().toISOString() }); closeSheet(); closeChat(); return true;
+    case "chat-leave": openSheet(confirmHtml("Leave this group?", "You stop getting its messages. Another member has to add you back.", "chat-leave-yes", id)); return true;
+    case "chat-leave-yes": leaveGroup(id); return true;
+    default: return false;
   }
+}
 
   /* ---------------- delegated clicks / changes ---------------- */
   document.addEventListener("click", async (e) => {
