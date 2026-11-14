@@ -5000,12 +5000,12 @@ function directInfoHtml(t) {
       infoRow("⚠", "Report", "Give feedback and report conversation", "new-report", t.id) +
       infoRow("🗑", "Delete chat", "", "chat-delete", t.id, "danger"));
 }
-  function groupInfoHtml(t) {
+
+function groupInfoHtml(t) {
   const members = threadMembers(t);
   const pref = getPref(t.id);
   const name = threadTitle(t);
   
-  // Use a group icon for the avatar
   const groupAvatar = '<div class="big-av" style="background:var(--blue); display:grid; place-items:center; font-size:32px; color:white;">👥</div>';
   
   const profileHeader = 
@@ -5134,7 +5134,7 @@ window.toggleReadReceipts = function(threadId) {
   toast("Read receipts " + (checked ? "on" : "off"));
 }
 
-// 4. Members List (With Tabs)
+1function directInfoHtml(t) {
 window.openMessengerMembersSheet = function(threadId) {
   const t = state.threads.find(x => x.id === threadId);
   const members = threadMembers(t);
