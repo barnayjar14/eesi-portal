@@ -5063,7 +5063,6 @@ function groupInfoHtml(t) {
 }
 /* ================== NEW MESSENGER UI FUNCTIONS ================== */
 
-// 1. Mute Chat (Radio Buttons)
 window.openMuteRadioSheet = function(threadId) {
   const pref = getPref(threadId);
   const current = pref.mute || "off";
@@ -5097,11 +5096,9 @@ window.applyMuteRadio = function(threadId) {
   toast("Chat muted");
 }
 
-// 2. Block a Member (Full List)
 window.openMessengerBlockSheet = function(threadId) {
   const t = state.threads.find(x => x.id === threadId);
   const members = threadMembers(t).filter(m => m.user_id !== state.userId);
-  
   const list = members.map(m => {
     const p = profileOf(m.user_id);
     const isBlocked = state.blockedUsers.includes(m.user_id);
@@ -5111,34 +5108,24 @@ window.openMessengerBlockSheet = function(threadId) {
       <button class="small-btn ${isBlocked ? 'red' : 'gray'}" type="button" onclick="toggleBlock('${m.user_id}'); closeSheet();">${isBlocked ? "Unblock" : "Block"}</button>
     </div>`;
   }).join("");
-
   openSheet(`<div style="background:var(--card); min-height:100%;"><h2 style="padding:16px;">Block a member</h2>${list}</div>`);
 }
 
-// 3. Read Receipts (Toggle Screen)
 window.openReadReceiptsSheet = function(threadId) {
-  const enabled = localStorage.getItem("eesi-receipts-" + threadId) !== "off";
+  const enabled = getPref(threadId).receipts !== false;
   openSheet(`<div style="padding:16px; background:var(--card); min-height:100%;">
     <h2 style="margin-top:0;">Read receipts</h2>
     <label style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;cursor:pointer;">
       <span style="font-size:16px;">Show read receipts</span>
-      <input type="checkbox" id="readReceiptToggle" ${enabled ? 'checked' : ''} onchange="window.toggleReadReceipts(${threadId})" style="width:24px;height:24px;accent-color:var(--blue);">
+      <input type="checkbox" id="readReceiptToggle" ${enabled ? 'checked' : ''} onchange="updatePref(${threadId}, 'receipts', this.checked)" style="width:24px;height:24px;accent-color:var(--blue);">
     </label>
     <p class="muted" style="margin-top:16px;">Chat members will be able to see when you've read their messages.</p>
   </div>`);
 }
 
-window.toggleReadReceipts = function(threadId) {
-  const checked = $("readReceiptToggle").checked;
-  localStorage.setItem("eesi-receipts-" + threadId, checked ? "on" : "off");
-  toast("Read receipts " + (checked ? "on" : "off"));
-}
-
-1function directInfoHtml(t) {
 window.openMessengerMembersSheet = function(threadId) {
   const t = state.threads.find(x => x.id === threadId);
   const members = threadMembers(t);
-  
   const list = members.map(m => {
     const p = profileOf(m.user_id);
     return `<div class="person" style="border:none;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:12px 16px;">
@@ -5157,34 +5144,7 @@ window.openMessengerMembersSheet = function(threadId) {
     ${list}
   </div>`);
 }
-  const t = state.threads.find(x => x.id === threadId);
-  const members = threadMembers(t);
-  
-  // We'll show everyone in the "All" tab for now.
-  const list = members.map(m => {
-    const p = profileOf(m.user_id);
-    return `<div class="person" style="border:none;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:12px 16px;">
-      ${face(p)}
-      <span class="person-info">
-        <b>${esc(p?.full_name || "Member")}</b>
-        <span class="muted" style="font-size:12px;">@${esc((p?.email || "").split("@")[0])}</span>
-      </span>
-      ${m.user_id !== state.userId ? `<button class="small-btn btn" type="button" onclick="closeSheet(); openDirect('${m.user_id}')">Chat</button>` : ''}
-    </div>`;
-  }).join("");
 
-  openSheet(`<div style="background:var(--card); min-height:100%;">
-    <h2 style="text-align:center; margin-bottom:16px;">Members</h2>
-    <div class="tabs" style="justify-content:center; margin-bottom:16px;">
-      <button class="tab active" style="border-radius:20px; padding:8px 24px; background:var(--border); color:var(--text);">All</button>
-      <button class="tab" style="border-radius:20px; padding:8px 24px; background:transparent; border:none;">Admins</button>
-    </div>
-    <div class="muted" style="padding:0 16px 8px; font-size:12px;">Other members</div>
-    ${list}
-  </div>`);
-}
-
-// 5. Leave Chat (Native White Dialog)
 window.openLeaveChatDialog = function(threadId) {
   const sheet = $("sheet");
   sheet.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; background:rgba(0,0,0,0.5); position:fixed; inset:0; z-index:9999;">
@@ -5880,29 +5840,31 @@ window.submitChangePassword = submitChangePassword;
 
   /* ---------------- extra act handler ---------------- */
   function handleExtraAct(act, id, el) {
-    switch (act) {
-      case "block-user": toggleBlock(id); return true;
-case "block-members": openBlockMenu(id); return true;
-case "do-block": toggleBlock(id); return true;
-      case "center-live-location": centerLiveLocation(id); return true;
-      case "admin-edit": openAdminEditSheet(id); return true;
-      case "admin-delete-user": permanentlyDeleteUser(id); return true;
-      case "admin-revoke": askRevokeMemberAccess(id); return true;
-      case "admin-revoke-confirm": revokeMemberAccess(id); return true;
-      case "admin-edit-save": saveAdminMember(id); return true;
-      case "noop": return true;
-      case "close-sheet": closeSheet(); return true;
-      case "person-menu": openPersonMenu(id); return true;
-      case "view-profile": openProfileView(id); return true;
-      case "open-dm": closeSheet(); openDirect(id); return true;
-      case "planned": openPlanned(id); return true;
-      case "call-start": startCall(id); return true;
-      case "call-mute": toggleMic(); return true;
-      case "call-cam": toggleCam(); return true;
-      case "call-end": endCall(null, true); return true;
-      case "call-accept": acceptIncoming(); return true;
-      case "call-decline": declineIncoming(); return true;
-      case "chat-media": openMediaSheet(); return true;
+  switch (act) {
+    case "block-user": toggleBlock(id); return true;
+    case "block-members": openBlockMenu(id); return true;
+    case "do-block": toggleBlock(id); return true;
+    case "center-live-location": centerLiveLocation(id); return true;
+    case "admin-edit": openAdminEditSheet(id); return true;
+    case "admin-delete-user": permanentlyDeleteUser(id); return true;
+    case "admin-revoke": askRevokeMemberAccess(id); return true;
+    case "admin-revoke-confirm": revokeMemberAccess(id); return true;
+    case "admin-edit-save": saveAdminMember(id); return true;
+    case "noop": return true;
+    case "close-sheet": closeSheet(); return true;
+    case "person-menu": openPersonMenu(id); return true;
+    case "view-profile": openProfileView(id); return true;
+    case "open-dm": closeSheet(); openDirect(id); return true;
+    case "planned": openPlanned(id); return true;
+    case "call-start": startCall(id); return true;
+    case "call-mute": toggleMic(); return true;
+    case "call-cam": toggleCam(); return true;
+    case "call-end": endCall(null, true); return true;
+    case "call-accept": acceptIncoming(); return true;
+    case "call-decline": declineIncoming(); return true;
+    case "chat-media": openMediaSheet(); return true;
+    
+    // NEW MESSENGER SETTINGS
     case "new-mute": openMuteRadioSheet(id); return true;
     case "new-notify": openNotifyToggleSheet(id); return true;
     case "new-autosave": openAutoSaveSheet(id); return true;
@@ -5919,6 +5881,8 @@ case "do-block": toggleBlock(id); return true;
     case "new-leave": openLeaveChatDialog(id); return true;
     case "chat-pinned": toast("No pinned messages yet."); return true;
     case "remove-my-reaction": removeMyReaction(id); return true;
+    
+    // STANDARD ACTIONS
     case "chat-save-photo": savePhotoById(id); return true;
     case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
     case "chat-notify": openNotifySheet(id); return true;
