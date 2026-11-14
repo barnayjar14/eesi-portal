@@ -4974,28 +4974,29 @@ async function toggleBlock(userId) {
         infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger"));
   }
   function groupInfoHtml(t) {
-    const members = threadMembers(t);
-    const pref = getPref(t.id);
-    const faces = members.map(m => profileOf(m.user_id)).filter(Boolean).slice(0, 8)
-      .map(p => '<span class="mini-av">' + face(p) + '</span>').join("");
-    return infoHead(threadTitle(t), members.length + " members", '<span class="big-av big-init">👥</span>') +
-      infoSection("Chat info", mediaHtml()) +
-      infoSection("Members",
-        '<div class="member-strip">' + faces + '</div>' +
-        infoRow("👥", members.length + " members", "See all", "chat-members", t.id) +
-        infoRow("➕", "Add people", "", "chat-add", t.id)) +
-      infoSection("Actions",
-        infoRow("🔕", isMuted(t.id) ? "Unmute" : "Mute", "", "chat-mute", t.id) +
-        infoRow("🔔", "Notifications & sounds", muteText(t.id), "chat-notify", t.id) +
-        infoRow("📌", pref.pinned ? "Unpin chat" : "Pin chat", "Keeps this chat at the top of your list", "chat-pin", t.id)) +
-      infoSection("Privacy & support",
-        infoRow("👁", "Read receipts", "Not available yet", "planned", "receipts") +
-        infoRow("💬", "Typing indicator", "Not available yet", "planned", "typing") +
-        infoRow("⛔", "Block a member", "", "block-members", t.id) +
-        infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
-        infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger") +
-        infoRow("🚪", "Leave chat", "", "chat-leave", t.id, "danger"));
-  }
+  const members = threadMembers(t);
+  const pref = getPref(t.id);
+  const faces = members.map(m => profileOf(m.user_id)).filter(Boolean).slice(0, 8)
+    .map(p => '<span class="mini-av">' + face(p) + '</span>').join("");
+  
+  return infoHead(threadTitle(t), members.length + " members", '<span class="big-av big-init">👥</span>') +
+    infoSection("Chat info", mediaHtml()) +
+    infoSection("Members",
+      '<div class="member-strip">' + faces + '</div>' +
+      infoRow("👥", members.length + " members", "See all", "new-members", t.id) +
+      infoRow("➕", "Add people", "", "chat-add", t.id)) +
+    infoSection("Actions",
+      infoRow("🔕", isMuted(t.id) ? "Unmute" : "Mute", "", "new-mute", t.id) +
+      infoRow("🔔", "Notifications & sounds", muteText(t.id), "new-mute", t.id) +
+      infoRow("📌", pref.pinned ? "Unpin chat" : "Pin chat", "Keeps this chat at the top of your list", "chat-pin", t.id)) +
+    infoSection("Privacy & support",
+      infoRow("👁", "Read receipts", "On", "new-receipts", t.id) +
+      infoRow("💬", "Typing indicator", "On", "noop", t.id) +
+      infoRow("⛔", "Block a member", "", "new-block", t.id) +
+      infoRow("⚠", "Report", "Give feedback and report conversation", "planned", "report") +
+      infoRow("🗑", "Delete entire conversation", "", "chat-delete", t.id, "danger") +
+      infoRow("🚪", "Leave chat", "", "new-leave", t.id, "danger"));
+}
   function renderChatInfo() {
     const t = state.threads.find(x => x.id === state.activeThread);
     if (!t || $("chatInfo").classList.contains("hidden")) return;
@@ -5014,6 +5015,133 @@ async function toggleBlock(userId) {
   toast("Reaction removed");
   await loadMessages(state.activeThread);
 }
+/* ================== NEW MESSENGER UI FUNCTIONS ================== */
+
+// 1. Mute Chat (Radio Buttons)
+window.openMuteRadioSheet = function(threadId) {
+  const pref = getPref(threadId);
+  const current = pref.mute || "off";
+  const opts = [["900000","For 15 minutes"],["3600000","For 1 hour"],["28800000","For 8 hours"],["86400000","For 24 hours"],["forever","Until I change it"]];
+  const radios = opts.map(([val, label]) => {
+    const checked = (current === val || (current === "off" && val === "off")) ? "checked" : "";
+    return `<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+      <input type="radio" name="muteTime" value="${val}" ${checked} style="width:20px;height:20px;accent-color:var(--blue);">
+      <span>${label}</span>
+    </label>`;
+  }).join("");
+
+  openSheet(`<div style="background:var(--card); border-radius:16px; margin:0 16px; overflow:hidden;">
+    <h2 style="padding:16px; margin:0; font-size:18px;">Mute this chat?</h2>
+    <div>${radios}</div>
+    <div style="display:flex; justify-content:flex-end; gap:16px; padding:16px; font-weight:bold;">
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;" onclick="closeSheet()">Cancel</button>
+      <button style="background:none;border:none;color:var(--blue);cursor:pointer;" onclick="window.applyMuteRadio(${threadId})">OK</button>
+    </div>
+  </div>`);
+}
+
+window.applyMuteRadio = function(threadId) {
+  const selected = document.querySelector('input[name="muteTime"]:checked');
+  if (!selected) return closeSheet();
+  const val = selected.value;
+  const muteValue = val === "forever" ? "forever" : Date.now() + Number(val);
+  setPref(threadId, { mute: muteValue });
+  refreshChatViews();
+  closeSheet();
+  toast("Chat muted");
+}
+
+// 2. Block a Member (Full List)
+window.openMessengerBlockSheet = function(threadId) {
+  const t = state.threads.find(x => x.id === threadId);
+  const members = threadMembers(t).filter(m => m.user_id !== state.userId);
+  
+  const list = members.map(m => {
+    const p = profileOf(m.user_id);
+    const isBlocked = state.blockedUsers.includes(m.user_id);
+    return `<div class="person" style="border:none;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:12px 16px;">
+      ${face(p)}
+      <span class="person-info"><b>${esc(p?.full_name || "Member")}</b></span>
+      <button class="small-btn ${isBlocked ? 'red' : 'gray'}" type="button" onclick="toggleBlock('${m.user_id}'); closeSheet();">${isBlocked ? "Unblock" : "Block"}</button>
+    </div>`;
+  }).join("");
+
+  openSheet(`<div style="background:var(--card); min-height:100%;"><h2 style="padding:16px;">Block a member</h2>${list}</div>`);
+}
+
+// 3. Read Receipts (Toggle Screen)
+window.openReadReceiptsSheet = function(threadId) {
+  const enabled = localStorage.getItem("eesi-receipts-" + threadId) !== "off";
+  openSheet(`<div style="padding:16px; background:var(--card); min-height:100%;">
+    <h2 style="margin-top:0;">Read receipts</h2>
+    <label style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;cursor:pointer;">
+      <span style="font-size:16px;">Show read receipts</span>
+      <input type="checkbox" id="readReceiptToggle" ${enabled ? 'checked' : ''} onchange="window.toggleReadReceipts(${threadId})" style="width:24px;height:24px;accent-color:var(--blue);">
+    </label>
+    <p class="muted" style="margin-top:16px;">Chat members will be able to see when you've read their messages.</p>
+  </div>`);
+}
+
+window.toggleReadReceipts = function(threadId) {
+  const checked = $("readReceiptToggle").checked;
+  localStorage.setItem("eesi-receipts-" + threadId, checked ? "on" : "off");
+  toast("Read receipts " + (checked ? "on" : "off"));
+}
+
+// 4. Members List (With Tabs)
+window.openMessengerMembersSheet = function(threadId) {
+  const t = state.threads.find(x => x.id === threadId);
+  const members = threadMembers(t);
+  
+  // We'll show everyone in the "All" tab for now.
+  const list = members.map(m => {
+    const p = profileOf(m.user_id);
+    return `<div class="person" style="border:none;border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:12px 16px;">
+      ${face(p)}
+      <span class="person-info">
+        <b>${esc(p?.full_name || "Member")}</b>
+        <span class="muted" style="font-size:12px;">@${esc((p?.email || "").split("@")[0])}</span>
+      </span>
+      ${m.user_id !== state.userId ? `<button class="small-btn btn" type="button" onclick="closeSheet(); openDirect('${m.user_id}')">Chat</button>` : ''}
+    </div>`;
+  }).join("");
+
+  openSheet(`<div style="background:var(--card); min-height:100%;">
+    <h2 style="text-align:center; margin-bottom:16px;">Members</h2>
+    <div class="tabs" style="justify-content:center; margin-bottom:16px;">
+      <button class="tab active" style="border-radius:20px; padding:8px 24px; background:var(--border); color:var(--text);">All</button>
+      <button class="tab" style="border-radius:20px; padding:8px 24px; background:transparent; border:none;">Admins</button>
+    </div>
+    <div class="muted" style="padding:0 16px 8px; font-size:12px;">Other members</div>
+    ${list}
+  </div>`);
+}
+
+// 5. Leave Chat (Native White Dialog)
+window.openLeaveChatDialog = function(threadId) {
+  const sheet = $("sheet");
+  sheet.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; background:rgba(0,0,0,0.5); position:fixed; inset:0; z-index:9999;">
+    <div style="background:#fff; color:#111; width:300px; border-radius:12px; padding:20px; text-align:left;">
+      <h2 style="font-size:18px; margin:0 0 24px;">Leave chat?</h2>
+      <div style="display:flex; justify-content:flex-end; gap:24px; font-weight:bold;">
+        <button style="background:none; border:none; color:#007aff; cursor:pointer;" onclick="closeSheet()">CANCEL</button>
+        <button style="background:none; border:none; color:#007aff; cursor:pointer;" onclick="window.executeLeaveChat('${threadId}')">LEAVE</button>
+      </div>
+    </div>
+  </div>`;
+  sheet.classList.remove("hidden");
+}
+
+window.executeLeaveChat = async function(threadId) {
+  closeSheet();
+  const { error } = await client.from("thread_members").delete().eq("thread_id", threadId).eq("user_id", state.userId);
+  if (error) return toast("Could not leave group: " + error.message);
+  closeChat();
+  await loadThreads();
+  toast("You left the group.");
+}
+
+/* ================ END NEW MESSENGER UI FUNCTIONS ================ */
   function openMediaSheet() {
     const items = state.messages.filter(m => m.attachment_url && safeUrl(m.attachment_url)).slice().reverse();
     const rows = items.map(m => {
@@ -5494,6 +5622,11 @@ case "do-block": toggleBlock(id); return true;
       case "call-accept": acceptIncoming(); return true;
       case "call-decline": declineIncoming(); return true;
       case "chat-media": openMediaSheet(); return true;
+      case "new-mute": openMuteRadioSheet(id); return true;
+case "new-block": openMessengerBlockSheet(id); return true;
+case "new-receipts": openReadReceiptsSheet(id); return true;
+case "new-members": openMessengerMembersSheet(id); return true;
+case "new-leave": openLeaveChatDialog(id); return true;
       case "remove-my-reaction": removeMyReaction(id); return true;
       case "chat-save-photo": savePhotoById(id); return true;
       case "chat-mute": setPref(id, { mute: isMuted(id) ? null : "forever" }); refreshChatViews(); return true;
