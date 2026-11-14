@@ -3527,8 +3527,9 @@ function renderMessages() {
   }).join("") ||
     '<p class="muted" style="text-align:center;padding:20px;">No messages yet.</p>';
 
-  box.scrollTop = box.scrollHeight;
+    box.scrollTop = box.scrollHeight;
   updateSendBtn();
+  if (typeof autoSavePhotos === "function") autoSavePhotos();
 }
 
 function markThreadRead(threadId) {
