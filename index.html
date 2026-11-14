@@ -6343,7 +6343,7 @@ if (refreshWeatherBtn) {
         const { error } = await client.rpc("set_my_employee_location", { p_latitude: latitude, p_longitude: longitude });
         if (error) { $("locationStatus").textContent = "Could not share location: " + error.message; return; }
        $("locationStatus").textContent = "Location sharing is on. Last updated " + new Date().toLocaleTimeString();
-$("startLocationButton").classList.add("hidden");
+$("startLocationButton")?.classList.add("hidden");
 $("stopLocationButton").classList.remove("hidden");
 if (typeof toast === "function") toast("📍 Location sharing started");
         updateLiveWeather(latitude, longitude);   // <-- merged
@@ -6362,8 +6362,8 @@ if (typeof toast === "function") toast("📍 Location sharing started");
       if (error) $("locationStatus").textContent = "Stopped updates, but could not update sharing status: " + error.message;
       else $("locationStatus").textContent = "Location sharing is off.";
     }
-    $("startLocationButton").classList.remove("hidden");
-    $("stopLocationButton").classList.add("hidden");
+    $("startLocationButton")?.classList.remove("hidden");
+$("stopLocationButton").classList.add("hidden");
   }
   $("startLocationButton").addEventListener("click", startEmployeeLocationSharing);
   $("stopLocationButton").addEventListener("click", stopEmployeeLocationSharing);
