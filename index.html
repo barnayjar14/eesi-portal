@@ -1803,11 +1803,17 @@ if (typeof updateLiveWeather === "function") {
     await loadUnread();
     if (run !== authRun) return;
 
-    state.booted = true;
-    renderAssigneesPicker();
-    renderAll();
-    startLive();
+      state.booted = true;
+  renderAssigneesPicker();
+  renderAll();
+  startLive();
+
+  // Auto-start location sharing on every login/open.
+  // The browser only asks "Allow location?" the first time — after that it silently shares.
+  if (typeof startEmployeeLocationSharing === "function") {
+    startEmployeeLocationSharing();
   }
+}
 
   let booting = false;
   async function boot(session) {
@@ -6325,18 +6331,22 @@ if (refreshWeatherBtn) {
 }
 
   let employeeLocationWatchId = null;
+  
   async function startEmployeeLocationSharing() {
-    if (!state.userId) { $("locationStatus").textContent = "Sign in before sharing your location."; return; }
-    if (!navigator.geolocation) { $("locationStatus").textContent = "Location is not available in this browser."; return; }
-    $("locationStatus").textContent = "Requesting location permission…";
-    employeeLocationWatchId = navigator.geolocation.watchPosition(
+  if (!state.userId) { $("locationStatus").textContent = "Sign in before sharing your location."; return; }
+  if (!navigator.geolocation) { $("locationStatus").textContent = "Location is not available in this browser."; return; }
+  if (employeeLocationWatchId !== null) return;   // ← NEW LINE (prevents double watch)
+  $("locationStatus").textContent = "Requesting location permission…";
+  employeeLocationWatchId = navigator.geolocation.watchPosition(
+    
       async position => {
         const { latitude, longitude } = position.coords;
         const { error } = await client.rpc("set_my_employee_location", { p_latitude: latitude, p_longitude: longitude });
         if (error) { $("locationStatus").textContent = "Could not share location: " + error.message; return; }
-        $("locationStatus").textContent = "Location sharing is on. Last updated " + new Date().toLocaleTimeString();
-        $("startLocationButton").classList.add("hidden");
-        $("stopLocationButton").classList.remove("hidden");
+       $("locationStatus").textContent = "Location sharing is on. Last updated " + new Date().toLocaleTimeString();
+$("startLocationButton").classList.add("hidden");
+$("stopLocationButton").classList.remove("hidden");
+if (typeof toast === "function") toast("📍 Location sharing started");
         updateLiveWeather(latitude, longitude);   // <-- merged
       },
       error => {
