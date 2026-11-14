@@ -3896,8 +3896,8 @@ document.addEventListener("click", async e => {
     if (!activeMsgContext) return;
     
     const { error } = await client.rpc("react_to_message", { 
-      p_message_id: activeMsgContext.id, p_emoji: emoji 
-    });
+  p_message_id: Number(activeMsgContext.id), p_emoji: emoji 
+});
     if (error) return toast("Could not react: " + error.message);
     const msg = state.messages.find(m => String(m.id) === String(activeMsgContext.id));
 const isRemoving = msg?.message_reactions?.some(r => r.emoji === emoji && String(r.user_id) === String(state.userId));
@@ -3920,7 +3920,7 @@ await loadMessages(state.activeThread);
     } 
     else if (act === "forward") openForwardSheet(activeMsgContext.text);
     else if (act === "pin") {
-  const { error } = await client.rpc("toggle_pin_message", { p_message_id: activeMsgContext.id });
+  const { error } = await client.rpc("toggle_pin_message", { p_message_id: Number(activeMsgContext.id) });
   if (error) return toast("Could not pin: " + error.message);
   toast("Message pin toggled!");
   await loadMessages(state.activeThread);
