@@ -2675,7 +2675,7 @@ async function loadAnnouncements() {
 
 async function loadMessages(threadId) {
   const { data, error } = await client.from("messages")
-.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,edited_at,reply_to_id")
+.select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,is_pinned,message_reactions(emoji),edited_at,reply_to_id")
   .eq("thread_id", threadId).order("created_at", { ascending: true }).limit(300);
   if (state.activeThread !== threadId) return;   // ← race guard
   if (error) { toast("Could not load messages: " + error.message); return; }
@@ -2815,7 +2815,7 @@ async function handleIncomingMessage() {
   let activeIncoming = [];
   if (thread) {
     const { data, error } = await client.from("messages")
-      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,edited_at,reply_to_id")
+      .select("id,thread_id,user_id,sender_name,body,attachment_url,attachment_name,attachment_type,created_at,deleted_at,edited_at,reply_to_id,message_reactions(emoji)")
       .eq("thread_id", thread)
       .order("created_at", { ascending: true })
       .limit(300);
@@ -3509,7 +3509,7 @@ function renderMessages() {
           ((orig.body || "").length > 40 ? "…" : "") + '</div>';
       }
     }
-    const reactions = [];
+    const reactions = (m.message_reactions || []).map(r => r.emoji).filter(Boolean);
     const reactionBadge = reactions.length
       ? '<div class="msg-reaction-badge">' + reactions.map(esc).join("") + '</div>' : "";
     const edited = m.edited_at ? " (edited)" : "";
@@ -3527,7 +3527,7 @@ function renderMessages() {
   }).join("") ||
     '<p class="muted" style="text-align:center;padding:20px;">No messages yet.</p>';
 
-    box.scrollTop = box.scrollHeight;
+      box.scrollTop = box.scrollHeight;
   updateSendBtn();
   if (typeof autoSavePhotos === "function") autoSavePhotos();
 }
@@ -6366,7 +6366,6 @@ if (typeof toast === "function") toast("📍 Location sharing started");
     $("startLocationButton")?.classList.remove("hidden");
 $("stopLocationButton").classList.add("hidden");
   }
-  $("startLocationButton").addEventListener("click", startEmployeeLocationSharing);
   $("stopLocationButton").addEventListener("click", stopEmployeeLocationSharing);
 
   /* ---------------- live map ---------------- */
@@ -6859,14 +6858,15 @@ function hideSearchView() {
      to window explicitly for those buttons to work.
      ============================================================ */
   Object.assign(window, {
-    openCompose, closeCompose,
-    dtrTab,
-    renderAssigneesPicker,
-    openChatInfo, closeChatInfo,
-    toggleChatPlus, toggleEmoji, pickEmoji,
-    cancelReply,
-    cancelEditAnnouncement
-  });
+  openCompose, closeCompose,
+  dtrTab,
+  renderAssigneesPicker,
+  openChatInfo, closeChatInfo,
+  toggleChatPlus, toggleEmoji, pickEmoji,
+  cancelReply,
+  cancelEditAnnouncement,
+  setChatFilter
+});
 
   start();
 })();
