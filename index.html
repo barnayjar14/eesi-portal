@@ -763,7 +763,7 @@ your network.</div>
     <button class="tab active" type="button" data-report-type="service">Services Report</button>
     <button class="tab" type="button" data-report-type="delivery">Delivery Report</button>
     <button class="tab" type="button" data-report-type="checklist">PMS Checklist</button>
-    <button class="tab" type="button" id="pmsRecordsTab">PMS Records</button>
+    
     <button class="tab" type="button" id="reportSearchTab">🔍 Search</button>
   </div>
   <button id="reportFilterMenuButton" class="gray" type="button"
@@ -5649,7 +5649,7 @@ await loadAppNotifications();
     document.querySelectorAll("[data-report-type]").forEach(tab => {
       tab.classList.toggle("active", !records && tab.dataset.reportType === "checklist");
     });
-    $("pmsRecordsTab").classList.toggle("active", records);
+    $("pmsRecordsTab")?.classList.toggle("active", records);
     if (records) loadPmsRecords();
     else renderPmsSiteOptions();
   }
@@ -5666,7 +5666,7 @@ await loadAppNotifications();
       $("pmsChecklistPanel").classList.add("hidden");
       $("reportContent").classList.remove("hidden");
       $("reportFilterMenuButton").classList.remove("hidden");
-      $("pmsRecordsTab").classList.remove("active");
+      $("pmsRecordsTab")?.classList.remove("active");
       document.querySelectorAll("[data-report-type]").forEach(tab => {
         tab.classList.toggle("active", tab === button);
       });
@@ -5675,7 +5675,7 @@ await loadAppNotifications();
     });
   });
 
-  $("pmsRecordsTab").addEventListener("click", () => showPmsView("records"));
+  $("pmsRecordsTab")?.addEventListener("click", () => showPmsView("records"));
 
   // MERGED from index.html: filter change listeners
   ["pmsRecordsTeam", "pmsRecordsLocation", "pmsRecordsSite"].forEach(id => {
