@@ -3064,29 +3064,38 @@ function renderNotices() {
   const box = $("noticeList");
   if (!box) return;
   const items = [];
+  
   state.announcements.forEach(a => items.push({
     date: a.created_at, icon: "📢",
-    title: a.title || "Announcement", body: a.body || "", label: "Announcement"
+    title: a.title || "Announcement", body: a.body || "", label: "Announcement",
+    act: "go-announcements"
   }));
+  
   state.schedules.forEach(s => items.push({
     date: s.scheduled_date + "T" + (s.time_in || "00:00"),
     icon: "📅", title: s.title || "Schedule",
     body: [s.region, s.time_in && s.time_out ? s.time_in + "–" + s.time_out : "", s.priority].filter(Boolean).join(" · "),
-    label: "Schedule"
+    label: "Schedule",
+    act: "go-schedule"
   }));
+  
   state.approvalNotifications.forEach(n => items.push({
     date: n.created_at, icon: "🔔", title: n.title, body: n.body, label: "Notification"
   }));
+  
   state.appNotifications.forEach(n => {
     if (!n.is_read) items.push({
       date: n.created_at, icon: "📄", title: n.title, body: n.body,
       label: "Report", reportId: n.report_id
     });
   });
+  
   if (isManager()) state.pending.forEach(p => items.push({
     date: p.created_at, icon: "⏳",
-    title: "Pending: " + p.full_name, body: p.email || "", label: "Registration"
+    title: "Pending: " + p.full_name, body: p.email || "", label: "Registration",
+    act: "go-pending"
   }));
+  
   Object.entries(state.unread).forEach(([tid, count]) => {
     if (count > 0) {
       const t = state.threads.find(x => x.id === tid);
@@ -3094,18 +3103,26 @@ function renderNotices() {
         date: (state.previews[tid] || {}).created_at || t.created_at,
         icon: "💬",
         title: "Unread from " + threadTitle(t),
-        body: count + " new message(s)", label: "Chat"
+        body: count + " new message(s)", label: "Chat",
+        chatId: tid
       });
     }
   });
+  
   items.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
   box.innerHTML = items.map(item => {
-    const attr = item.reportId ? ' data-report-notice="' + esc(item.reportId) + '"' : "";
+    let attr = 'data-act="noop"'; // default if no action
+    if (item.reportId) attr = ' data-report-notice="' + esc(item.reportId) + '"';
+    else if (item.chatId) attr = ' data-chat-notice="' + esc(item.chatId) + '"';
+    else if (item.act) attr = ' data-act="' + esc(item.act) + '"';
+    
     return '<div class="item clickable"' + attr + '>' +
       '<b>' + item.icon + ' ' + esc(item.title) + '</b>' +
       '<div class="muted">' + esc(item.label) + ' · ' + esc(fmtDate(item.date)) + '</div>' +
       '<div>' + esc(item.body) + '</div></div>';
   }).join("") || '<p class="muted">No notifications yet.</p>';
+  
   const bell = $("bell");
   if (bell) bell.textContent = items.length ? String(items.length) : "";
 }
@@ -5501,11 +5518,22 @@ case "do-block": toggleBlock(id); return true;
       go("reports");
       return;
     }
+    
+    // Handle Chat Notifications
+const chatNoticeEl = e.target.closest("[data-chat-notice]");
+if (chatNoticeEl) {
+  const tid = Number(chatNoticeEl.dataset.chatNotice);
+  openThread(tid); // This opens the chat AND marks it as read automatically!
+  return;
+}
 
     const el = e.target.closest("[data-act]");
     if (!el) return;
     const { act, id } = el.dataset;
     if (handleExtraAct(act, id, el)) return;
+    if (act === "go-pending") { go("pending"); return; }
+if (act === "go-announcements") { go("announcements"); return; }
+if (act === "go-schedule") { go("schedule"); return; }
     if (act === "open-dm") openDirect(id);
     else if (act === "open-thread") openThread(id);
     else if (act === "map") showMap(id);
