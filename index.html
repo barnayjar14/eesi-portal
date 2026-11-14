@@ -1907,11 +1907,16 @@ if (typeof updateLiveWeather === "function") {
 
   /* ---------------- access / navigation ---------------- */
   function updateAccess() {
-    const canSeePmsChecklist = ["technician", "employee"].includes(state.role);
-    document.querySelector('[data-report-type="checklist"]')?.classList.toggle("hidden", !canSeePmsChecklist);
-    document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
-    document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("hidden", !isManager()));
-  }
+  // Only Technicians and Employees can see the report creation tabs
+  const canCreateReports = ["technician", "employee"].includes(state.role);
+  
+  document.querySelector('[data-report-type="service"]')?.classList.toggle("hidden", !canCreateReports);
+  document.querySelector('[data-report-type="delivery"]')?.classList.toggle("hidden", !canCreateReports);
+  document.querySelector('[data-report-type="checklist"]')?.classList.toggle("hidden", !canCreateReports);
+  
+  document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin()));
+  document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("hidden", !isManager()));
+}
 
   let page = "home";
   const historyStack = [];
@@ -1930,7 +1935,13 @@ if (typeof updateLiveWeather === "function") {
     document.querySelectorAll("nav.bottom button").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.page === p);
     });
-
+if (p === "reports" && isManager()) {
+  // Auto-open Search view for managers since they don't have form tabs
+  setTimeout(() => {
+    const searchTab = document.getElementById("reportSearchTab");
+    if (searchTab) searchTab.click();
+  }, 50);
+}
     if (p === "profile") renderProfile();
     if (p === "chat") { renderChatList(); renderMessages(); }
     if (p === "notices") { loadAppNotifications(); loadApprovalNotifications(); }
@@ -6787,12 +6798,13 @@ function showSearchView() {
   $("pmsRecordsTab").classList.remove("active");
   $("reportSearchTab").classList.add("active");
   const sel = $("searchSite");
-  if (sel) {
-    const current = sel.value;
-    sel.innerHTML = '<option value="">All sites</option>' +
-      state.sites.map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join("");
-    if (state.sites.some(s => String(s.id) === current)) sel.value = current;
-  }
+if (sel) {
+  const current = sel.value;
+  const sortedSites = [...(state.sites || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  sel.innerHTML = '<option value="">All sites</option>' +
+    sortedSites.map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join("");
+  if (sortedSites.some(s => String(s.id) === current)) sel.value = current;
+}
   runSearch();
 }
 function hideSearchView() {
