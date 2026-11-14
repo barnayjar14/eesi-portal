@@ -3080,7 +3080,8 @@ function renderNotices() {
   }));
   
   state.approvalNotifications.forEach(n => items.push({
-    date: n.created_at, icon: "🔔", title: n.title, body: n.body, label: "Notification"
+    date: n.created_at, icon: "🔔", title: n.title, body: n.body, label: "Notification",
+    act: "noop"
   }));
   
   state.appNotifications.forEach(n => {
@@ -3098,7 +3099,7 @@ function renderNotices() {
   
   Object.entries(state.unread).forEach(([tid, count]) => {
     if (count > 0) {
-      const t = state.threads.find(x => x.id === tid);
+      const t = state.threads.find(x => String(x.id) === String(tid));
       if (t) items.push({
         date: (state.previews[tid] || {}).created_at || t.created_at,
         icon: "💬",
@@ -3112,7 +3113,7 @@ function renderNotices() {
   items.sort((a, b) => new Date(b.date) - new Date(a.date));
   
   box.innerHTML = items.map(item => {
-    let attr = 'data-act="noop"'; // default if no action
+    let attr = 'data-act="noop"'; 
     if (item.reportId) attr = ' data-report-notice="' + esc(item.reportId) + '"';
     else if (item.chatId) attr = ' data-chat-notice="' + esc(item.chatId) + '"';
     else if (item.act) attr = ' data-act="' + esc(item.act) + '"';
@@ -3578,7 +3579,7 @@ function markThreadRead(threadId) {
   }
 
   async function openThread(id) {
-  const t = state.threads.find(x => x.id === id);
+const t = state.threads.find(x => String(x.id) === String(id));
   if (!t) return;
   const myToken = ++activeThreadToken;             // ← new: remember this request
   state.activeThread = id;
@@ -5519,10 +5520,10 @@ case "do-block": toggleBlock(id); return true;
       return;
     }
     
-    // Handle Chat Notifications
+// Handle Chat Notifications
 const chatNoticeEl = e.target.closest("[data-chat-notice]");
 if (chatNoticeEl) {
-  const tid = Number(chatNoticeEl.dataset.chatNotice);
+  const tid = chatNoticeEl.dataset.chatNotice;
   openThread(tid); // This opens the chat AND marks it as read automatically!
   return;
 }
