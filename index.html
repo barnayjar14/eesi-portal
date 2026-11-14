@@ -6851,6 +6851,22 @@ function hideSearchView() {
 })();
 /* =============== END REPORT SEARCH TAB =============== */
 
+  /* ============================================================
+     Expose inline-onclick handler functions to window.
+     Inline HTML onclick="fn()" runs in global scope, but our
+     functions live inside the IIFE — so they must be attached
+     to window explicitly for those buttons to work.
+     ============================================================ */
+  Object.assign(window, {
+    openCompose, closeCompose,
+    dtrTab,
+    renderAssigneesPicker,
+    openChatInfo, closeChatInfo,
+    toggleChatPlus, toggleEmoji, pickEmoji,
+    cancelReply,
+    cancelEditAnnouncement
+  });
+
   start();
 })();
 </script>
