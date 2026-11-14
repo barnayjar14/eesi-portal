@@ -662,13 +662,14 @@ your network.</div>
     <section class="page" id="page-home"><div class="ct">
       <h1 class="title">Welcome, <span id="welcome"></span></h1>
       <div class="card">Role: <b id="roleLabel"></b></div>
-      <div class="card" id="liveInfoCard">
+      <div id="liveInfoCard">
         <h2 style="margin-top:0">Local time and weather</h2>
         <div id="liveClock">Loading time…</div>
-        <div id="liveWeather" class="muted">Weather will appear after location sharing starts.</div>
+        <div id="liveWeather" class="muted">Loading weather…</div>
         <p id="locationStatus" class="muted">Location sharing is off.</p>
         <button class="btn" id="startLocationButton" type="button">Start sharing location</button>
         <button class="gray hidden" id="stopLocationButton" type="button">Stop sharing</button>
+        <button class="gray small-btn" id="refreshWeatherButton" type="button" style="margin-top:8px">🔄 Refresh weather</button>
       </div>
       <div id="setupWarn" class="card warn hidden">
         <b>Database setup needed</b>
@@ -1787,6 +1788,11 @@ state.setupIssue = "";
 requestNotificationPermission(); // <-- ADD THIS
     showDailyVerse();
     applyTheme(localStorage.getItem("eesi-theme") || "system");
+    
+// Load weather right away using Manila as the default location.
+if (typeof updateLiveWeather === "function") {
+  updateLiveWeather(14.5995, 120.9842);
+}
 
     await Promise.all([
       loadBlockedUsers(),
@@ -6295,6 +6301,28 @@ function renderEscalatorChecklist(unitName) {
   }
   updateLiveClock();
   setInterval(updateLiveClock, 1000);
+  
+const refreshWeatherBtn = $("refreshWeatherButton");
+if (refreshWeatherBtn) {
+  refreshWeatherBtn.addEventListener("click", () => {
+    if (navigator.geolocation && employeeLocationWatchId !== null) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          updateLiveWeather(pos.coords.latitude, pos.coords.longitude);
+          toast("Refreshing weather for your current location…");
+        },
+        () => {
+          updateLiveWeather(14.5995, 120.9842);
+          toast("Using default location (Manila) for weather.");
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+      );
+    } else {
+      updateLiveWeather(14.5995, 120.9842);
+      toast("Refreshing weather for Manila…");
+    }
+  });
+}
 
   let employeeLocationWatchId = null;
   async function startEmployeeLocationSharing() {
