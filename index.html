@@ -2862,6 +2862,487 @@ async function handleIncomingMessage() {
   }
 
   /* ---------------- renderers ---------------- */
+  /* ================== MISSING RENDER FUNCTIONS ================== */
+
+function renderMembers() {
+  const box = $("members");
+  if (!box) return;
+  box.innerHTML = state.profiles.map(memberRow).join("") ||
+    '<p class="muted">No members yet.</p>';
+}
+
+function renderOnline() {
+  const online = onlineIds();
+  const onBox = $("online");
+  const offBox = $("offline");
+  if (!onBox || !offBox) return;
+  const on  = state.profiles.filter(p => online.has(p.user_id));
+  const off = state.profiles.filter(p => !online.has(p.user_id));
+  onBox.innerHTML  = on.map(memberRow).join("")  || '<p class="muted">Nobody is online.</p>';
+  offBox.innerHTML = off.map(memberRow).join("") || '<p class="muted">Nobody is offline.</p>';
+}
+
+function renderPending() {
+  const box = $("pending");
+  if (!box) return;
+  if (!isManager()) { box.innerHTML = '<p class="muted">Admin only.</p>'; return; }
+  box.innerHTML = state.pending.map(r => {
+    return '<div class="item">' +
+      '<b>' + esc(r.full_name) + '</b> · ' + esc(roleLabel(r.requested_role)) +
+      '<div class="muted">' + esc(r.email || "") + '</div>' +
+      (r.team ? '<div>Team: ' + esc(r.team) + '</div>' : "") +
+      (r.area ? '<div>Area: ' + esc(r.area) + '</div>' : "") +
+      (r.phone ? '<div>Phone: ' + esc(r.phone) + '</div>' : "") +
+      '<div class="inline-actions">' +
+        '<button class="green small-btn" type="button" data-act="approve" data-id="' + esc(r.id) + '">Approve</button>' +
+        '<button class="red small-btn" type="button" data-act="decline" data-id="' + esc(r.id) + '">Decline</button>' +
+      '</div></div>';
+  }).join("") || '<p class="muted">No pending registrations.</p>';
+}
+
+function renderAnnouncements() {
+  const box = $("annList");
+  if (!box) return;
+  box.innerHTML = state.announcements.map(a => {
+    return '<div class="item">' +
+      '<b>' + esc(a.title) + '</b>' +
+      '<div class="muted">' + esc(a.author_name || "Admin") + ' · ' + esc(fmtDate(a.created_at)) + '</div>' +
+      '<div>' + esc((a.body || "").slice(0, 200)) +
+        ((a.body || "").length > 200 ? "…" : "") + '</div>' +
+      '<div class="inline-actions">' +
+        '<button class="gray small-btn" type="button" data-act="view-ann" data-id="' + esc(a.id) + '">View</button>' +
+        (isManager()
+          ? '<button class="btn small-btn" type="button" data-act="edit-ann" data-id="' + esc(a.id) + '">Edit</button>' +
+            '<button class="red small-btn" type="button" data-act="del-ann" data-id="' + esc(a.id) + '">Delete</button>'
+          : '') +
+      '</div></div>';
+  }).join("") || '<p class="muted">No announcements yet.</p>';
+}
+
+function renderSchedules() {
+  const box = $("scheduleList");
+  if (!box) return;
+  const filtered = state.regionFilter === "all"
+    ? state.schedules
+    : state.schedules.filter(s => s.region === state.regionFilter);
+  box.innerHTML = filtered.map(s => {
+    const match = (s.notes || "").match(/^\[ASSIGNED:\s*([^\]]+)\]/);
+    const assigned = match ? match[1] : "";
+    const notes = (s.notes || "").replace(/^\[ASSIGNED:\s*[^\]]+\]\s*/, "");
+    return '<div class="item">' +
+      '<b>' + esc(s.title) + '</b> <span class="badge">' + esc(s.priority || "Normal") + '</span>' +
+      '<div class="muted">' + esc(fmtDay(s.scheduled_date)) +
+        (s.region ? ' · ' + esc(s.region) : '') +
+        (s.time_in && s.time_out ? ' · ' + esc(s.time_in) + '–' + esc(s.time_out) : '') + '</div>' +
+      (assigned ? '<div><b>Assigned:</b> ' + esc(assigned) + '</div>' : '') +
+      (notes ? '<div>' + esc(notes) + '</div>' : '') +
+      (isManager()
+        ? '<div class="inline-actions"><button class="red small-btn" type="button" data-act="del-sched" data-id="' + esc(s.id) + '">Delete</button></div>'
+        : '') +
+      '</div>';
+  }).join("") || '<p class="muted">No schedules yet.</p>';
+}
+
+function renderSites() {
+  const box = $("siteList");
+  if (!box) return;
+  box.innerHTML = state.sites.map(s => {
+    return '<div class="item">' +
+      '<b>' + esc(s.name) + '</b>' +
+      '<div class="muted">' + esc([s.address, s.city, s.region].filter(Boolean).join(" · ")) + '</div>' +
+      '<div class="inline-actions">' +
+        '<button class="gray small-btn" type="button" data-act="map" data-id="' + esc(s.id) + '">📍 Map</button>' +
+        (isManager()
+          ? '<button class="red small-btn" type="button" data-act="del-site" data-id="' + esc(s.id) + '">Delete</button>'
+          : '') +
+      '</div></div>';
+  }).join("") || '<p class="muted">No sites yet.</p>';
+}
+
+function dtrOwn() {
+  return state.dtrs.filter(d => String(d.user_id) === String(state.userId));
+}
+
+function renderDtr() {
+  const tbody = $("dtrRows");
+  if (!tbody) return;
+  const own = dtrOwn();
+  tbody.innerHTML = own.map(d => {
+    const hrs = calculateDtrHours(d.time_in, d.time_out, d.overtime_approved);
+    const otMins = calculateOtMinutes(d.time_in, d.time_out);
+    const canApprove = isManager() && otMins > 0 && !d.overtime_approved;
+    const canDelete = String(d.user_id) === String(state.userId) || isManager();
+    return '<tr>' +
+      '<td>' + esc(fmtTableDate(d.work_date)) + '</td>' +
+      '<td>' + esc(employeeDisplayName()) + '</td>' +
+      '<td>' + esc([d.location, d.job].filter(Boolean).join(" · ")) + '</td>' +
+      '<td>' + esc((d.time_in || "") + " – " + (d.time_out || "")) + '</td>' +
+      '<td>' + hrs.toFixed(2) +
+        (otMins > 0 ? (d.overtime_approved ? " (OT✓)" : " (OT)") : "") + '</td>' +
+      '<td>' +
+        (canApprove
+          ? '<button class="green small-btn" type="button" data-act="approve-ot" data-id="' + esc(d.id) + '">Approve OT</button>'
+          : '') +
+        (canDelete
+          ? '<button class="red small-btn" type="button" data-act="del-dtr" data-id="' + esc(d.id) + '">×</button>'
+          : '') +
+      '</td></tr>';
+  }).join("") || '<tr><td colspan="6" class="muted">No DTR entries yet.</td></tr>';
+}
+
+function renderNotes() {
+  const box = $("noteList");
+  if (!box) return;
+  box.innerHTML = state.notes.map(n => {
+    const mine = String(n.user_id) === String(state.userId);
+    return '<div class="item">' +
+      '<b>' + esc(n.title) + '</b>' +
+      '<div class="muted">' + esc(profileName(n.user_id)) + ' · ' + esc(fmtDate(n.created_at)) + '</div>' +
+      '<div style="white-space:pre-wrap">' + esc(n.body) + '</div>' +
+      ((mine || isManager())
+        ? '<div class="inline-actions"><button class="red small-btn" type="button" data-act="del-note" data-id="' + esc(n.id) + '">Delete</button></div>'
+        : '') +
+      '</div>';
+  }).join("") || '<p class="muted">No notes yet.</p>';
+}
+
+function renderRecs() {
+  const box = $("recList");
+  if (!box) return;
+  box.innerHTML = state.recs.map(r => {
+    const comments = (r.recommendation_comments || []).map(c =>
+      '<div class="item" style="background:var(--bg)">' +
+        '<b>' + esc(profileName(c.user_id)) + '</b>' +
+        '<div>' + esc(c.comment) + '</div>' +
+        '<div class="muted">' + esc(fmtDate(c.created_at)) + '</div>' +
+      '</div>').join("");
+    return '<div class="item">' +
+      '<b>' + esc(r.part) + ' — ' + esc(r.condition) + '</b>' +
+      '<div class="muted">' + esc(r.site) +
+        (r.location ? ' · ' + esc(r.location) : '') +
+        ' · ' + esc(fmtDate(r.created_at)) + '</div>' +
+      '<div>' + esc(r.reason) + '</div>' +
+      (comments ? '<div style="margin-top:8px">' + comments + '</div>' : '') +
+      (isManager()
+        ? '<div class="field" style="margin-top:8px">' +
+            '<textarea id="comment' + esc(r.id) + '" placeholder="Add a comment…" rows="2"></textarea>' +
+          '</div>' +
+          '<div class="inline-actions">' +
+            '<button class="btn small-btn" type="button" data-act="comment-rec" data-id="' + esc(r.id) + '">Comment</button>' +
+            '<button class="red small-btn" type="button" data-act="del-rec" data-id="' + esc(r.id) + '">Delete</button>' +
+          '</div>'
+        : (String(r.user_id) === String(state.userId)
+            ? '<div class="inline-actions"><button class="red small-btn" type="button" data-act="del-rec" data-id="' + esc(r.id) + '">Delete</button></div>'
+            : '')) +
+      '</div>';
+  }).join("") || '<p class="muted">No recommendations yet.</p>';
+}
+
+function renderNotices() {
+  const box = $("noticeList");
+  if (!box) return;
+  const items = [];
+  state.announcements.forEach(a => items.push({
+    date: a.created_at, icon: "📢",
+    title: a.title || "Announcement", body: a.body || "", label: "Announcement"
+  }));
+  state.schedules.forEach(s => items.push({
+    date: s.scheduled_date + "T" + (s.time_in || "00:00"),
+    icon: "📅", title: s.title || "Schedule",
+    body: [s.region, s.time_in && s.time_out ? s.time_in + "–" + s.time_out : "", s.priority].filter(Boolean).join(" · "),
+    label: "Schedule"
+  }));
+  state.approvalNotifications.forEach(n => items.push({
+    date: n.created_at, icon: "🔔", title: n.title, body: n.body, label: "Notification"
+  }));
+  state.appNotifications.forEach(n => {
+    if (!n.is_read) items.push({
+      date: n.created_at, icon: "📄", title: n.title, body: n.body,
+      label: "Report", reportId: n.report_id
+    });
+  });
+  if (isManager()) state.pending.forEach(p => items.push({
+    date: p.created_at, icon: "⏳",
+    title: "Pending: " + p.full_name, body: p.email || "", label: "Registration"
+  }));
+  Object.entries(state.unread).forEach(([tid, count]) => {
+    if (count > 0) {
+      const t = state.threads.find(x => x.id === tid);
+      if (t) items.push({
+        date: (state.previews[tid] || {}).created_at || t.created_at,
+        icon: "💬",
+        title: "Unread from " + threadTitle(t),
+        body: count + " new message(s)", label: "Chat"
+      });
+    }
+  });
+  items.sort((a, b) => new Date(b.date) - new Date(a.date));
+  box.innerHTML = items.map(item => {
+    const attr = item.reportId ? ' data-report-notice="' + esc(item.reportId) + '"' : "";
+    return '<div class="item clickable"' + attr + '>' +
+      '<b>' + item.icon + ' ' + esc(item.title) + '</b>' +
+      '<div class="muted">' + esc(item.label) + ' · ' + esc(fmtDate(item.date)) + '</div>' +
+      '<div>' + esc(item.body) + '</div></div>';
+  }).join("") || '<p class="muted">No notifications yet.</p>';
+  const bell = $("bell");
+  if (bell) bell.textContent = items.length ? String(items.length) : "";
+}
+
+function renderProfile() {
+  const p = state.profile || {};
+  $("pName").value = p.full_name || "";
+  $("pId").value = p.id_no || "";
+  $("pAddress").value = p.address || "";
+  $("pTeam").value = p.team || "";
+  $("pPhone").value = p.phone || "";
+  $("pArea").value = p.area || "";
+  $("pEmail").value = p.email || state.email || "";
+  const avatarUrl = safeUrl(p.avatar_url);
+  $("profilePreview").src = avatarUrl || BLANK_IMG;
+  const cover = safeUrl(p.cover_url);
+  const coverBox = $("coverPreview");
+  if (cover) { coverBox.style.backgroundImage = 'url("' + cover + '")'; coverBox.innerHTML = ""; }
+  else { coverBox.style.backgroundImage = ""; coverBox.innerHTML = "<span>Cover picture</span>"; }
+  renderLeaveBalances();
+}
+
+function renderAdmin() {
+  const box = $("adminList");
+  if (!box) return;
+  if (!isAdmin()) { box.innerHTML = '<p class="muted">Admin only.</p>'; return; }
+  box.innerHTML = state.profiles.map(p => {
+    const role = state.roles[p.user_id];
+    const roleText = role ? roleLabel(role.app_role) : "—";
+    return '<div class="person">' + face(p) +
+      '<span class="person-info">' +
+        '<b>' + esc(p.full_name || "Member") + '</b>' +
+        '<span class="muted">' + esc(roleText) +
+          (p.area ? ' · ' + esc(p.area) : '') + '</span>' +
+      '</span>' +
+      '<button class="gray small-btn" type="button" data-act="admin-edit" data-id="' + esc(p.user_id) + '">Edit</button>' +
+      '</div>';
+  }).join("") || '<p class="muted">No members.</p>';
+}
+
+function renderAssigneesPicker() {
+  const box = $("assigneesPicker");
+  if (!box) return;
+  const region = $("schRegion")?.value || "";
+  const grouped = {};
+  state.profiles.forEach(p => {
+    const r = state.roles[p.user_id]?.app_role || "employee";
+    if (r === "admin") return;
+    const area = p.area || "Unassigned";
+    if (region && area !== region) return;
+    const team = p.team || "No team";
+    const key = area + " / " + team;
+    (grouped[key] = grouped[key] || []).push(p);
+  });
+  const keys = Object.keys(grouped).sort();
+  box.innerHTML = keys.map(key => {
+    return '<div class="person-group-title">' + esc(key) + '</div>' +
+      grouped[key].map(p =>
+        '<label style="display:flex;gap:8px;align-items:center;margin:4px 0">' +
+          '<input type="checkbox" name="schPersonnel" data-name="' + esc(p.full_name) + '" value="' + esc(p.user_id) + '" style="width:auto">' +
+          esc(p.full_name) +
+        '</label>').join("");
+  }).join("") || '<p class="muted">No personnel in this area.</p>';
+}
+
+function renderReportSites() {
+  const sel = $("reportSite");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select a site</option>' +
+    state.sites.map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join("");
+  if (state.sites.some(s => String(s.id) === current)) sel.value = current;
+}
+
+function renderReportFilters() {
+  const region = $("filterReportRegion")?.value || "";
+  const areaSel = $("filterReportArea");
+  const siteSel = $("filterReportSite");
+  if (!areaSel || !siteSel) return;
+  const areaCur = areaSel.value;
+  const siteCur = siteSel.value;
+  const filtered = state.sites.filter(s => !region || s.region === region);
+  const areas = [...new Set(filtered.map(s => s.city).filter(Boolean))].sort();
+  areaSel.innerHTML = '<option value="">All areas</option>' +
+    areas.map(a => '<option value="' + esc(a) + '">' + esc(a) + '</option>').join("");
+  if (areas.includes(areaCur)) areaSel.value = areaCur;
+  const area = areaSel.value;
+  const final = filtered.filter(s => !area || s.city === area);
+  siteSel.innerHTML = '<option value="">All sites</option>' +
+    final.map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join("");
+  if (final.some(s => String(s.id) === siteCur)) siteSel.value = siteCur;
+}
+
+function renderDtrSiteOptions() {
+  const sel = $("dtrLocation");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select a site</option>' +
+    state.sites.map(s => '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>').join("");
+  if (state.sites.some(s => s.name === current)) sel.value = current;
+}
+
+/* ================ END MISSING RENDER FUNCTIONS ================ */
+  /* ================== CHAT HELPERS ================== */
+function threadMembers(t) { return (t && t.thread_members) || []; }
+
+function threadTitle(t) {
+  if (!t) return "Chat";
+  if (t.kind === "group") return t.title || "Group chat";
+  const other = threadMembers(t).find(m => String(m.user_id) !== String(state.userId));
+  return other ? profileName(other.user_id) : (t.title || "Chat");
+}
+
+function threadAvatar(t) {
+  if (!t) return '<span class="avatar initial">?</span>';
+  if (t.kind === "group") return '<span class="avatar initial">👥</span>';
+  const other = threadMembers(t).find(m => String(m.user_id) !== String(state.userId));
+  return face(other ? profileOf(other.user_id) : null);
+}
+
+function renderChatList() {
+  const box = $("chatList");
+  if (!box) return;
+  const peopleRow = $("chatPeopleRow");
+  if (peopleRow) {
+    const online = onlineIds();
+    peopleRow.innerHTML = state.profiles
+      .filter(p => String(p.user_id) !== String(state.userId))
+      .slice(0, 20)
+      .map(p => {
+        const on = online.has(p.user_id);
+        return '<button class="story" type="button" data-act="open-dm" data-id="' + esc(p.user_id) + '">' +
+          '<span class="bubble-av">' + face(p) + (on ? '<span class="presdot"></span>' : '') + '</span>' +
+          '<small>' + esc((p.full_name || "").split(" ")[0]) + '</small>' +
+          '</button>';
+      }).join("");
+  }
+  const q = ($("chatSearch")?.value || "").trim().toLowerCase();
+  const filter = state.chatFilter || "all";
+  let list = state.threads.filter(t => {
+    if (isHidden(t)) return false;
+    if (filter === "unread") return (state.unread[t.id] || 0) > 0;
+    if (filter === "groups") return t.kind === "group";
+    return true;
+  }).filter(t => !q || threadTitle(t).toLowerCase().includes(q));
+
+  list.sort((a, b) => {
+    const pa = getPref(a.id).pinned ? 1 : 0;
+    const pb = getPref(b.id).pinned ? 1 : 0;
+    if (pa !== pb) return pb - pa;
+    const ta = (state.previews[a.id]?.created_at) || a.created_at || "";
+    const tb = (state.previews[b.id]?.created_at) || b.created_at || "";
+    return tb.localeCompare(ta);
+  });
+
+  box.innerHTML = list.map(t => {
+    const title = threadTitle(t);
+    const preview = state.previews[t.id];
+    const unread = state.unread[t.id] || 0;
+    const lastTime = preview?.created_at
+      ? new Date(preview.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+    let previewText = "No messages yet";
+    if (preview) {
+      previewText = preview.attachment_type?.startsWith("image/") ? "📷 Photo"
+        : preview.attachment_name ? "📎 File"
+        : (preview.body || "");
+      if (String(preview.user_id) === String(state.userId)) previewText = "You: " + previewText;
+    }
+    const isDirect = t.kind === "direct";
+    const other = isDirect ? threadMembers(t).find(m => String(m.user_id) !== String(state.userId)) : null;
+    const isOnline = other && onlineIds().has(other.user_id);
+    return '<button class="thread-row' + (unread ? ' is-unread' : '') + '" type="button" data-act="open-thread" data-id="' + esc(t.id) + '">' +
+      '<span class="thread-av">' + threadAvatar(t) +
+        (isDirect && isOnline ? '<span class="online-dot"></span>' : '') + '</span>' +
+      '<span class="thread-txt">' +
+        '<span class="thread-top">' +
+          '<span class="thread-name">' + esc(title) + '</span>' +
+          '<span class="thread-time">' + esc(lastTime) + '</span>' +
+        '</span>' +
+        '<span class="thread-sub">' +
+          '<span class="thread-preview">' + esc(previewText) + '</span>' +
+          (unread ? '<span class="msgr-dot"></span>' : '') +
+        '</span>' +
+      '</span></button>';
+  }).join("") ||
+    '<p class="muted" style="padding:20px;text-align:center;">No chats yet. Tap the pencil to start one.</p>';
+}
+
+function updateSendBtn() {
+  const input = $("messageText");
+  const btn = $("sendBtn");
+  if (!input || !btn) return;
+  if (editingMessageId) { btn.textContent = "✓"; return; }
+  btn.textContent = input.value.trim().length > 0 ? "➤" : "👍";
+}
+
+function openCompose() {
+  $("chatBrowser").classList.add("hidden");
+  $("chatCompose").classList.remove("hidden");
+  $("peopleList").innerHTML = state.profiles
+    .filter(p => String(p.user_id) !== String(state.userId))
+    .map(p => '<button class="person" type="button" data-act="open-dm" data-id="' + esc(p.user_id) + '">' +
+      face(p) +
+      '<span class="person-info"><b>' + esc(p.full_name || p.email) + '</b>' +
+        '<span class="muted">' + esc(p.team || "") + (p.area ? " · " + esc(p.area) : "") + '</span></span>' +
+      '</button>').join("") || '<p class="muted">No other members.</p>';
+}
+
+function closeCompose() {
+  $("chatCompose").classList.add("hidden");
+  $("chatBrowser").classList.remove("hidden");
+  hideGroupForm();
+}
+
+function setChatFilter(filter) {
+  state.chatFilter = filter;
+  document.querySelectorAll("#chatChips .chip").forEach(c => {
+    c.classList.toggle("active", c.dataset.filter === filter);
+  });
+  renderChatList();
+}
+
+function openChatInfo() {
+  if (!state.activeThread) return;
+  $("activeChat").classList.add("hidden");
+  $("chatInfo").classList.remove("hidden");
+  renderChatInfo();
+}
+
+function closeChatInfo() {
+  $("chatInfo").classList.add("hidden");
+  $("activeChat").classList.remove("hidden");
+}
+
+function toggleChatPlus() { $("chatPlus").classList.toggle("hidden"); }
+function toggleEmoji() { $("emojiPop").classList.toggle("hidden"); }
+
+function pickEmoji(emoji) {
+  const input = $("messageText");
+  if (!input) return;
+  input.value += emoji; input.focus(); updateSendBtn();
+  $("emojiPop").classList.add("hidden");
+}
+
+function cancelReply() {
+  replyingToMsg = null;
+  $("replyingIndicator").classList.add("hidden");
+  $("replyName").textContent = "";
+  $("replyPreview").textContent = "";
+}
+
+function cancelEditMessage() {
+  editingMessageId = null;
+  const input = $("messageText");
+  if (input) input.value = "";
+  updateSendBtn();
+}
+/* ================ END CHAT HELPERS ================ */
+
   function renderAll() {
     renderHome(); renderMembers(); renderOnline(); renderPending(); renderAnnouncements();
     renderSchedules(); renderSites(); renderDtr(); renderNotes(); renderRecs(); renderNotices();
@@ -2979,12 +3460,66 @@ function updateAnnouncementTicker() {
         : '') +
     '</div>';
   }
-  function renderMessages() {
-  if (!state.activeThread) return;
-  const q = ($("messageSearch")?.value || "").trim().toLowerCase();
-  const filteredMessages = state.messages.filter(m =>
-    !q || (m.body || "").toLowerCase().includes(q) || (m.attachment_name || "").toLowerCase().includes(q));
   
+function renderMessages() {
+  if (!state.activeThread) return;
+  const box = $("messages");
+  if (!box) return;
+  const q = ($("messageSearch")?.value || "").trim().toLowerCase();
+  const filtered = state.messages.filter(m =>
+    !q ||
+    (m.body || "").toLowerCase().includes(q) ||
+    (m.attachment_name || "").toLowerCase().includes(q));
+
+  const t = state.threads.find(x => x.id === state.activeThread);
+
+  box.innerHTML = filtered.map(m => {
+    const mine = String(m.user_id) === String(state.userId);
+    const time = fmtDate(m.created_at);
+    let avatar = "";
+    if (!mine && t && t.kind === "group") avatar = face(profileOf(m.user_id));
+    const sender = mine ? "" :
+      '<div class="muted" style="font-size:11px;margin-bottom:2px;">' + esc(m.sender_name || "Member") + '</div>';
+    let attach = "";
+    if (m.attachment_url) {
+      const url = safeUrl(m.attachment_url);
+      if (url) {
+        attach = (m.attachment_type || "").startsWith("image/")
+          ? '<img class="chat-img" src="' + esc(url) + '" alt="' + esc(m.attachment_name || "Photo") + '">'
+          : '<a href="' + esc(url) + '" target="_blank" rel="noopener">📎 ' + esc(m.attachment_name || "File") + '</a>';
+      }
+    }
+    let reply = "";
+    if (m.reply_to_id) {
+      const orig = state.messages.find(x => String(x.id) === String(m.reply_to_id));
+      if (orig) {
+        const snip = (orig.body || "").slice(0, 40);
+        reply = '<div class="reply-header">↩️ ' + esc(orig.sender_name || "Member") + ': ' + esc(snip) +
+          ((orig.body || "").length > 40 ? "…" : "") + '</div>';
+      }
+    }
+    const reactions = (m.message_reactions || []).map(r => r.emoji).filter(Boolean);
+    const reactionBadge = reactions.length
+      ? '<div class="msg-reaction-badge">' + reactions.map(esc).join("") + '</div>' : "";
+    const edited = m.edited_at ? " (edited)" : "";
+    const body = m.deleted_at ? '<i class="muted">Message deleted</i>' : esc(m.body || "");
+    return '<div class="msgr-row' + (mine ? ' mine' : '') + '">' +
+      avatar +
+      '<div class="msgr-bub"' +
+        ' data-message-id="' + esc(m.id) + '"' +
+        ' data-own-message="' + (mine ? '1' : '0') + '"' +
+        ' data-text="' + esc(m.body || '') + '"' +
+        ' data-user-id="' + esc(m.user_id) + '">' +
+        sender + reply + body + attach + reactionBadge +
+        '<small class="msgr-time">' + esc(time) + edited + '</small>' +
+      '</div></div>';
+  }).join("") ||
+    '<p class="muted" style="text-align:center;padding:20px;">No messages yet.</p>';
+
+  box.scrollTop = box.scrollHeight;
+  updateSendBtn();
+}
+
 function markThreadRead(threadId) {
     if (!state.userId) return;
     const now = new Date().toISOString();
@@ -3063,11 +3598,7 @@ typingChannel.on('broadcast', { event: 'typing' }, ({ payload }) => {
   function closeChat() {
   cancelReply();
   cancelEditMessage();
-  // ... rest of the code ...
   if (typingChannel) { client.removeChannel(typingChannel); typingChannel = null; }
-  activeThreadToken++;
-  state.activeThread = null;
-  // ... (rest of the code)
   activeThreadToken++;
   state.activeThread = null;
   state.messages = [];
@@ -3077,6 +3608,8 @@ typingChannel.on('broadcast', { event: 'typing' }, ({ payload }) => {
   $("chatBrowser").classList.remove("hidden");
   renderChatList();
 }
+window.closeChat = closeChat;
+
   window.closeChat = closeChat;
 
   function showGroupForm() {
@@ -3357,8 +3890,6 @@ else if (act === "edit") {
   editingMessageId = activeMsgContext.id;
   $("messageText").value = activeMsgContext.text;
   $("messageText").focus();
-  $("editingPreview").textContent = activeMsgContext.text;
-  $("editingIndicator").classList.remove("hidden");
   $("emojiPop").classList.add("hidden");
   $("chatPlus").classList.add("hidden");
   updateSendBtn();
@@ -3804,6 +4335,65 @@ resolve(canvas.toDataURL("image/jpeg", quality));
 
   $("profileFile").addEventListener("change", e => { uploadPhoto(e.target.files[0], "avatar_url"); e.target.value = ""; });
   $("coverFile").addEventListener("change", e => { uploadPhoto(e.target.files[0], "cover_url"); e.target.value = ""; });
+
+  /* ================== DTR HELPERS ================== */
+function dtrTab(tab) {
+  const fill = tab === "fill";
+  $("dtrFill").classList.toggle("hidden", !fill);
+  $("dtrPreview").classList.toggle("hidden", fill);
+  $("dtrFillTab").classList.toggle("active", fill);
+  $("dtrPrevTab").classList.toggle("active", !fill);
+  if (!fill) renderDtrPaper();
+}
+
+function dtrSheetDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(String(dateStr) + "T00:00:00");
+  if (isNaN(d)) return String(dateStr);
+  return d.toLocaleDateString("en-PH", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+function time12(t) {
+  if (!t) return "";
+  const parts = String(t).split(":").map(Number);
+  const h = parts[0], m = parts[1] || 0;
+  if (isNaN(h)) return String(t);
+  return (h % 12 || 12) + ":" + String(m).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
+}
+
+function employeeDisplayName() {
+  return (state.profile?.full_name || state.email || "").toUpperCase();
+}
+
+function renderDtrPaper() {
+  const paper = $("dtrPaper");
+  if (!paper) return;
+  const rows = dtrOwn().slice().sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+  const sigSrc = typeof getActiveSignatureSrc === "function" ? getActiveSignatureSrc() : "";
+  const hasSig = sigSrc && sigSrc !== "data:,";
+  paper.innerHTML =
+    '<table class="dp-table">' +
+      '<tr><th colspan="5" class="dp-sheet-title">DAILY TIME RECORD &amp; AUTHORITY TO CONDUCT OVERTIME</th></tr>' +
+      '<tr class="dp-col-head">' +
+        '<th>DATE</th><th>LOCATION</th><th>WORK DESCRIPTION</th><th>TIME START/END</th><th>APPROVED BY:</th>' +
+      '</tr>' +
+      (rows.map(r =>
+        '<tr>' +
+          '<td>' + esc(dtrSheetDate(r.work_date)) + '</td>' +
+          '<td>' + esc((r.location || "").toUpperCase()) + '</td>' +
+          '<td>' + esc((r.job || "").toUpperCase()) + '</td>' +
+          '<td>' + esc(time12(r.time_in)) + ' – ' + esc(time12(r.time_out)) + '</td>' +
+          '<td></td>' +
+        '</tr>').join("") ||
+        '<tr><td colspan="5" class="dp-empty">No DTR records.</td></tr>') +
+    '</table>' +
+    '<div class="dp-employee-sign">' +
+      (hasSig ? '<img src="' + esc(sigSrc) + '" alt="Signature">' : '') +
+      '<div class="dp-employee-name">' + esc(employeeDisplayName()) + '</div>' +
+      '<div class="dp-employee-caption">Signature Over Printed Name of Employee</div>' +
+    '</div>';
+}
+/* ================ END DTR HELPERS ================ */
 
   /* ---------------- signature + export ---------------- */
   const sig = $("signature");
